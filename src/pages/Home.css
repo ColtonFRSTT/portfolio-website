@@ -1,0 +1,9 @@
+.liquid-glass {
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.35);
+  background: rgba(var(--glass-tint,255,255,255),.08); /* pick up JS-set var */
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  box-shadow: 0 4px 40px rgba(0,0,0,.12);
+  transition: transform .15s ease;        /* for parallax */
+}

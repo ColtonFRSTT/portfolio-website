@@ -1,25 +1,16 @@
-import logo from './logo.svg';
-import './App.css';
+import { ColorModeProvider } from "./components/ui/color-mode"
+import { ChakraProvider } from "@chakra-ui/react"
+import { Home } from "./pages/Home"
+import system from "./theme/theme"
 
-function App() {
+function App({ pageProps }) {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    <ChakraProvider value = {system}>
+      <ColorModeProvider>
+        <Home {...pageProps} />
+      </ColorModeProvider>
+    </ChakraProvider>
+  )
 }
 
-export default App;
+export default App

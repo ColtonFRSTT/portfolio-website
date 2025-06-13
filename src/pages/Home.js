@@ -7,13 +7,10 @@ export function Home() {
     return (
         <Box
             minHeight="100vh"
-            bgImage="url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80')"
-            bgSize="cover"
-            bgPosition="center"
+            className = "background"
         >
             <Box
                 className="header"
-                
                 display="flex"
                 justifyContent="space-between"
                 alignItems="center"
@@ -24,7 +21,6 @@ export function Home() {
                 zIndex="10"
             >
                 <LiquidGlassBox
-                    className="liquid-glass"
                     display="flex"
                     justifyContent="space-between"
                     gap={10}
@@ -32,20 +28,19 @@ export function Home() {
                     marginLeft="30px"
                     fontSize="lg"
                 >
-                    <Text marginLeft={2} color="primary"> Home </Text>
-                    <Text marginRight={2} color="primary"> Projects </Text>
+                    <Text marginLeft={2} color="secondary"> Home </Text>
+                    <Text marginRight={2} color="secondary"> Projects </Text>
                 </LiquidGlassBox>
                 <LiquidGlassBox
-                    className="liquid-glass"
                     marginRight="30px"
                     display="flex"
                     justifyContent="space-between"
                     gap={6}
                     alignItems="center"
                 >
-                    <Box my={1} marginLeft={2}><Github color="#7965C1" size="1.25rem" /></Box>
-                    <Box my={1}><Linkedin color="#7965C1" size="1.25rem" /></Box>
-                    <Box my={1} marginRight={2}><Instagram color="#7965C1" size="1.25rem" /></Box>
+                    <Box my={1} marginLeft={2}><Github color="#483AA0" size="1.25rem" /></Box>
+                    <Box my={1}><Linkedin color="#483AA0" size="1.25rem" /></Box>
+                    <Box my={1} marginRight={2}><Instagram color="#483AA0" size="1.25rem" /></Box>
                 </LiquidGlassBox>
             </Box>
             <Box
@@ -59,11 +54,20 @@ export function Home() {
                 pt={10}
                 pb={10}
             >
-                <Box className="welcome-note">
-                    <Text color="primary" fontSize="xl" fontWeight="bold">
-                        I'm Colton. Welcome to my website!
-                    </Text>
-                </Box>
+                <LiquidGlassBox
+                    className="liquid-glass"
+                    display="flex"
+                    flexDirection="column"
+                    justifyContent="center"
+                    alignItems="center"
+                    width="80%"
+                    maxWidth="800px"
+                    padding={8}
+                    borderRadius="md"
+                >
+
+                </LiquidGlassBox>
+                
                 {/* Add extra content to enable scrolling */}
                 <Box height="1200px" />
             </Box>

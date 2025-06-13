@@ -1,9 +1,35 @@
 import { Linkedin, Instagram, Github } from "lucide-react"
-import { Text, Box } from "@chakra-ui/react"
+import { Text, Box, Image } from "@chakra-ui/react"
 import LiquidGlassBox from "../components/ui/LiquidGlassBox"
 import "./Home.css"
+import { useState } from "react"
 
 export function Home() {
+
+    const [songName, setSongName] = useState("")
+    const [artistName, setArtistName] = useState("")
+    const [imageUrl, setImageUrl] = useState("")
+    const [songIsLoading, setSongIsLoading] = useState(true)
+
+    useState(() => {
+        const fetchSongData = async () => {
+            setSongIsLoading(true)
+            try {
+                const response = await fetch("https://txz4mvpkqg.execute-api.us-east-2.amazonaws.com/dev/spotifyGetCurrentSong")
+                const data = await response.json()
+                console.log("Fetched song data:", data)
+                setSongName(data.name)
+                setArtistName(data.artists)
+                setImageUrl(data.albumImage)
+            } catch (error) {
+                console.error("Error fetching song data:", error)
+            } finally {
+                setSongIsLoading(false)
+            }
+        }
+        fetchSongData()
+    }, [])
+
     return (
         <Box
             minHeight="100vh"
@@ -58,16 +84,35 @@ export function Home() {
                     className="liquid-glass"
                     display="flex"
                     flexDirection="column"
-                    justifyContent="center"
-                    alignItems="center"
-                    width="80%"
-                    maxWidth="800px"
-                    padding={8}
+                    width="20%"
+                    height="135px"
+                    padding={2}
                     borderRadius="md"
                 >
-
+                    <Text fontSize="lg" fontWeight="bold" mb={2} ml={3} color={"secondary"}>
+                        What's Playing?
+                    </Text>
+                    <Box
+                        display="flex"
+                        alignItems="flex-start"
+                        ml={3}
+                    >
+                        <Image
+                            src={imageUrl}
+                            alt="Current Song"
+                            boxSize="70px"
+                            borderRadius="md"
+                            objectFit="cover"
+                            mb={4}
+                            fallbackSrc="https://via.placeholder.com/200" // Placeholder image while loading
+                        />
+                        <Box ml={3}>
+                            <Text fontWeight="bold" fontSize="lg">{songName}</Text>
+                            <Text fontSize="sm">{artistName}</Text>
+                        </Box>
+                    </Box>
                 </LiquidGlassBox>
-                
+
                 {/* Add extra content to enable scrolling */}
                 <Box height="1200px" />
             </Box>

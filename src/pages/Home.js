@@ -110,11 +110,10 @@ export function Home() {
                         display="flex"
                         justifyContent="space-between"
                         gap={10}
-                        height="40px"
                         alignItems="center"
                         marginLeft="100px"
                         marginTop="50px"
-                        padding={2}
+                        padding={1}
                     >
                         <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} marginLeft={2} color="secondary"> Home </Text>
                         <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} marginRight={2} color="secondary"> Projects </Text>

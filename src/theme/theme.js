@@ -15,7 +15,8 @@ const config = defineConfig({
         md: {value: "1rem"},
         lg: {value: "1.25rem"},
         xl: {value: "2rem"},
-        xxl: {value: "2.50rem"}
+        xxl: {value: "2.50rem"},
+        xxxl: {value: "3rem"}
       },
       colors: {
         primary: {value: "#7965C1" },

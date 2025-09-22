@@ -1,5 +1,5 @@
 import { Linkedin, Instagram, Github, Music4 } from "lucide-react"
-import { Text, Box, Image, Progress, Flex } from "@chakra-ui/react"
+import { Text, Box, Image, Progress, Flex, List } from "@chakra-ui/react"
 import LiquidGlassBox from "../components/ui/LiquidGlassBox"
 import "./Home.css"
 import { useState, useRef, useEffect } from "react"
@@ -242,11 +242,61 @@ export function Home() {
                     gap={200}
                     mt={20}
                 >
-                    <LiquidGlassBox width="600px" height="600px">
-
+                    <LiquidGlassBox width="600px" height="900px">
+                        <Box
+                            padding = {5}
+                        >
+                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
+                                MyKeen
+                            </Text>
+                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
+                                Jan. - Aug. 2025
+                            </Text>
+                            <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                A client service platform that leverages artificial intelligence and industry-informed automations to combine professional analysis, business insights with workflow automations. 
+                            </Text>
+                        </Box>
+                        <Box
+                            padding = {8}
+                        >
+                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
+                                Tech Stack
+                            </Text>
+                            <List.Root marginLeft = {10} marginTop = {3} textShadow="0 0 8px #483AA0">
+                                <List.Item>React</List.Item>
+                                <List.Item>TypeScript</List.Item>
+                                <List.Item>AWS</List.Item>
+                                <List.Item>SST</List.Item>
+                            </List.Root>
+                        </Box>
                     </LiquidGlassBox>
-                    <LiquidGlassBox width="600px" height="600px">
-
+                    <LiquidGlassBox width="600px" height="900px">
+                        <Box
+                            padding = {5}
+                        >
+                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
+                                Mun Course Notifier
+                            </Text>
+                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
+                                Aug. 2024 - Present
+                            </Text>
+                            <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                A fully automated platform that continuously monitors university course availability and notifies students via email when seats open.
+                            </Text>
+                        </Box>
+                        <Box
+                            padding = {8}
+                        >
+                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
+                                Tech Stack
+                            </Text>
+                            <List.Root marginLeft = {10} marginTop = {3} textShadow="0 0 8px #483AA0">
+                                <List.Item>React</List.Item>
+                                <List.Item>JavaScript</List.Item>
+                                <List.Item>AWS: Lambda, ECS, DynamoDB, SES</List.Item>
+                                <List.Item>Puppeteer</List.Item>
+                            </List.Root>
+                        </Box>
                     </LiquidGlassBox>
                 </Flex>
             </Box>

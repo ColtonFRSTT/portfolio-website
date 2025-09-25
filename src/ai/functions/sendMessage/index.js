@@ -1,0 +1,48 @@
+import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
+import Anthropic from "@anthropic-ai/sdk";
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+function agClient(event) {
+  const { domainName, stage } = event.requestContext; // e.g. abc.execute-api.us-east-1.amazonaws.com / prod
+  return new ApiGatewayManagementApiClient({ endpoint: `https://${domainName}/${stage}` });
+}
+async function send(client, connectionId, data) {
+  const Data = Buffer.from(typeof data === "string" ? data : JSON.stringify(data));
+  try {
+    await client.send(new PostToConnectionCommand({ ConnectionId: connectionId, Data }));
+  } catch (e) {
+    // GoneException = client disconnected; ignore
+  }
+}
+
+export const handler = async (event) => {
+  const connectionId = event.requestContext.connectionId;
+  const client = agClient(event);
+
+  let payload = {};
+  try { payload = JSON.parse(event.body || "{}"); } catch {}
+  const userText = (payload.message || "").trim();
+  if (!userText) { await send(client, connectionId, { type:"error", message:"Empty message"}); return { statusCode: 400 }; }
+
+  await send(client, connectionId, { type:"started" });
+
+  const model = payload.model || "claude-3-7-sonnet-20250219";
+  const system = payload.system || "You are a helpful assistant.";
+
+  // Stream tokens from Claude and relay to the same WS connection
+  const stream = await anthropic.messages.stream({
+    model,
+    max_tokens: 1024,
+    system,
+    messages: [{ role:"user", content:userText }]
+  });
+
+  stream.on("text", async (t) => { await send(client, connectionId, { type:"delta", text: t }); });
+  stream.on("message", async (msg) => { await send(client, connectionId, { type:"final", message: msg }); });
+  stream.on("error", async (err) => { await send(client, connectionId, { type:"error", message: String(err?.message||err) }); });
+
+  await stream.finalMessage(); // wait for completion
+  await send(client, connectionId, { type:"done" });
+  return { statusCode: 200 };
+};

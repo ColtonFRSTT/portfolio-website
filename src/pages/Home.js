@@ -91,6 +91,7 @@ export function Home() {
             className = "background"
             display="flex"
             flexDirection="column"
+            minHeight="100vh"
         >
             <Box
                 height="100vh"
@@ -226,11 +227,12 @@ export function Home() {
                 </Box>
             </Box>
             <Box 
-                height="100vh"
+                minHeight="100vh"
                 display="flex"
                 justifyContent="center"
                 alignItems="center"
                 flexDirection="column"
+                py={20}
                 >
                 <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxxl"} color={"secondary"}>
                     Projects
@@ -242,7 +244,7 @@ export function Home() {
                     gap={200}
                     mt={20}
                 >
-                    <LiquidGlassBox width="600px" height="900px">
+                    <LiquidGlassBox width="600px" height="1000px">
                         <Box
                             padding = {5}
                         >
@@ -262,15 +264,27 @@ export function Home() {
                             <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
                                 Tech Stack
                             </Text>
-                            <List.Root marginLeft = {10} marginTop = {3} textShadow="0 0 8px #483AA0">
+                            <List.Root marginLeft = {10} marginTop = {3} textShadow="0 0 8px #483AA0" fontFamily={"body"} fontSize={"lg"}>
                                 <List.Item>React</List.Item>
                                 <List.Item>TypeScript</List.Item>
                                 <List.Item>AWS</List.Item>
                                 <List.Item>SST</List.Item>
                             </List.Root>
                         </Box>
+                        <Box
+                            padding = {8}
+                        >
+                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
+                                My Role
+                            </Text>
+                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                This was a team project that I worked on during my co-operative work-term at Keen.
+                                I designed the front and back-end components for features that aimed to improve productivity and workflow for accontants and small buisness owners.
+                                An example of one of the features I designed was a automated variance anlysis system with AI integrations for providing useful explanations for variances in periods and budgets.
+                            </Text>
+                        </Box>
                     </LiquidGlassBox>
-                    <LiquidGlassBox width="600px" height="900px">
+                    <LiquidGlassBox width="600px" height="1000px">
                         <Box
                             padding = {5}
                         >
@@ -290,12 +304,24 @@ export function Home() {
                             <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
                                 Tech Stack
                             </Text>
-                            <List.Root marginLeft = {10} marginTop = {3} textShadow="0 0 8px #483AA0">
+                            <List.Root marginLeft = {10} marginTop = {3} textShadow="0 0 8px #483AA0" fontFamily={"body"} fontSize={"lg"}>
                                 <List.Item>React</List.Item>
                                 <List.Item>JavaScript</List.Item>
                                 <List.Item>AWS: Lambda, ECS, DynamoDB, SES</List.Item>
                                 <List.Item>Puppeteer</List.Item>
                             </List.Root>
+                        </Box>
+                        <Box
+                            padding = {8}
+                        >
+                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
+                                My Role
+                            </Text>
+                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                This was a solo project I created after facing the inefficiency in Mun's waitlist system.
+                                I designed a automated system using Puppeteer and cron deployed on ECS to notify users via email when thier course(s) becomes available.
+                                I also dsigned the front-end website so other sudents can use the service effortlessly by just entering thier emails.
+                            </Text>
                         </Box>
                     </LiquidGlassBox>
                 </Flex>

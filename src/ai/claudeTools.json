@@ -1,0 +1,30 @@
+[
+  {
+    "name": "github_search",
+    "description": "Search code and issues in a repo.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "repo": { "type": "string", "description": "owner/name" },
+        "q": { "type": "string", "description": "search query" },
+        "type": { "type": "string", "enum": ["code","issues","commits"], "default": "code" }
+      },
+      "required": ["repo","q"]
+    }
+  },
+  {
+    "name": "github_get_file",
+    "description": "Fetch exact lines from a file at a ref.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "repo": { "type": "string" },
+        "ref": { "type": "string", "description": "branch or commit SHA" },
+        "path": { "type": "string" },
+        "start": { "type": "integer" },
+        "end": { "type": "integer" }
+      },
+      "required": ["repo","ref","path"]
+    }
+  }
+]

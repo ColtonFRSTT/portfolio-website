@@ -17,32 +17,46 @@ async function send(client, connectionId, data) {
 }
 
 export const handler = async (event) => {
-  const connectionId = event.requestContext.connectionId;
-  const client = agClient(event);
+  console.log("=== LAMBDA STARTED ===");
+  console.log("Lambda invoked with event:", JSON.stringify(event, null, 2));
 
-  let payload = {};
-  try { payload = JSON.parse(event.body || "{}"); } catch {}
-  const userText = (payload.message || "").trim();
-  if (!userText) { await send(client, connectionId, { type:"error", message:"Empty message"}); return { statusCode: 400 }; }
+  try {
+    const connectionId = event.requestContext.connectionId;
+    const client = agClient(event);
 
-  await send(client, connectionId, { type:"started" });
+    let payload = {};
+    try { payload = JSON.parse(event.body || "{}"); } catch {}
 
-  const model = payload.model || "claude-3-7-sonnet-20250219";
-  const system = payload.system || "You are a helpful assistant.";
+    console.log("Parsed payload:", payload);
 
-  // Stream tokens from Claude and relay to the same WS connection
-  const stream = await anthropic.messages.stream({
-    model,
-    max_tokens: 1024,
-    system,
-    messages: [{ role:"user", content:userText }]
-  });
+    const userText = (payload.message || "").trim();
+    if (!userText) { 
+      await send(client, connectionId, { type:"error", message:"Empty message"}); 
+      return { statusCode: 400 }; 
+    }
 
-  stream.on("text", async (t) => { await send(client, connectionId, { type:"delta", text: t }); });
-  stream.on("message", async (msg) => { await send(client, connectionId, { type:"final", message: msg }); });
-  stream.on("error", async (err) => { await send(client, connectionId, { type:"error", message: String(err?.message||err) }); });
+    console.log("User text:", userText);
+    await send(client, connectionId, { type:"started" });
 
-  await stream.finalMessage(); // wait for completion
-  await send(client, connectionId, { type:"done" });
-  return { statusCode: 200 };
+    const model = payload.model || "claude-3-7-sonnet-20250219"; // Fixed model name
+    const system = payload.system || "You are a helpful assistant.";
+
+    // Stream tokens from Claude and relay to the same WS connection
+    const stream = await anthropic.messages.stream({
+      model,
+      max_tokens: 1024,
+      system,
+      messages: [{ role:"user", content:userText }]
+    });
+
+    stream.on("text", async (t) => { await send(client, connectionId, { type:"delta", text: t }); });
+    stream.on("message", async (msg) => { await send(client, connectionId, { type:"done", message: msg }); });
+    stream.on("error", async (err) => { await send(client, connectionId, { type:"error", message: String(err?.message||err) }); });
+
+    await stream.finalMessage(); // wait for completion
+    return { statusCode: 200 };
+  } catch (error) {
+    console.error("Lambda error:", error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+  }
 };

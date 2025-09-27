@@ -5,6 +5,6 @@ const TABLE = process.env.CONNECTIONS_TABLE;
 
 export const handler = async (event) => {
   const connectionId = event.requestContext.connectionId;
-  await ddb.send(new PutCommand({ TableName: TABLE, Item: { connectionId } }));
+  await ddb.send(new PutCommand({ TableName: TABLE, Item: { connection_id: connectionId} }));
   return { statusCode: 200 };
 };

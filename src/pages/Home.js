@@ -1,9 +1,11 @@
 import { Linkedin, Instagram, Github, Music4 } from "lucide-react"
 import { Text, Box, Image, Progress, Flex, List } from "@chakra-ui/react"
 import LiquidGlassBox from "../components/ui/LiquidGlassBox"
+import LiquidGlassBoxStatic from "../components/ui/LiquidGlassBoxStatic"
 import "./Home.css"
 import { useState, useRef, useEffect } from "react"
 import { Spinner } from "@chakra-ui/react"
+import { KoltBot } from "../components/koltBot"
 
 function msToMinutesSeconds(ms) {
   const totalSeconds = Math.floor(ms / 1000)
@@ -147,18 +149,23 @@ export function Home() {
                     <Box
                         display = "flex"
                         flexDirection = "column"
-                        mt={"8rem"}
-                        width = "800px"
-                        height = "300px"
+                        width = "1300px"
                     >
-                        <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxxl"} color={"secondary"}> Hello, Im Colton</Text>
-                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}> Software Developer</Text>
+                        <Text ml={2} fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"}>
+                            Ask KoltBot
+                        </Text>
+                        <Text ml={2} mb={2} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
+                            KoltBot is designed to answer questions about my projects, work experience, hobbies, and more
+                        </Text>
+                        <LiquidGlassBoxStatic>
+                            <KoltBot />
+                        </LiquidGlassBoxStatic>
                     </Box>
                     <Box
                         display="flex"
                         flexDirection="column"
                         position="fixed"
-                        bottom="50px"
+                        bottom="30px"
                         right="100px"
                         zIndex={20}
                     >

@@ -1,62 +1,201 @@
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
 import Anthropic from "@anthropic-ai/sdk";
 
+const tools = [
+  {
+    name: "github_search",
+    description: "Search code and issues in a repo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string", description: "owner/name" },
+        q: { type: "string", description: "search query" },
+        type: { type: "string", enum: ["code", "issues", "commits"], default: "code" },
+      },
+      required: ["repo", "q"],
+    },
+  },
+  {
+    name: "github_get_file",
+    description: "Fetch exact lines from a snippet of a file at a ref. Only request snippets of 1500-2000 lines at a time",
+    input_schema: {
+      type: "object",
+      properties: {
+        repo: { type: "string" },
+        ref: { type: "string", description: "branch or commit SHA" },
+        path: { type: "string" },
+        start: { type: "integer" },
+        end: { type: "integer" },
+      },
+      required: ["repo", "ref", "path"],
+    },
+  },
+];
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function agClient(event) {
-  const { domainName, stage } = event.requestContext; // e.g. abc.execute-api.us-east-1.amazonaws.com / prod
+  const { domainName, stage } = event.requestContext;
   return new ApiGatewayManagementApiClient({ endpoint: `https://${domainName}/${stage}` });
 }
+
 async function send(client, connectionId, data) {
   const Data = Buffer.from(typeof data === "string" ? data : JSON.stringify(data));
   try {
     await client.send(new PostToConnectionCommand({ ConnectionId: connectionId, Data }));
-  } catch (e) {
-    // GoneException = client disconnected; ignore
+  } catch (err) {
+    if (err?.name === "GoneException") {
+      console.log("WS gone:", connectionId);
+    } else {
+      console.error("PostToConnection error:", err);
+    }
   }
 }
 
+function wireStream(stream, client, connectionId) {
+  let sentToolUses = new Set(); // Track which tool_use IDs we've already sent
+
+  stream.on("text", async (t) => {
+    await send(client, connectionId, { type: "delta", text: t });
+  });
+
+  stream.on("event", async (ev) => {
+    console.log("Stream event:", ev.type, ev);
+    // Don't send tool_use on start - input might be incomplete
+  });
+
+  stream.on("message", async (message) => {
+    console.log("Final message received:", JSON.stringify(message, null, 2));
+    
+    // Check for tool_use in the final message content
+    if (message?.content) {
+      for (const block of message.content) {
+        if (block.type === "tool_use" && !sentToolUses.has(block.id)) {
+          console.log("Sending tool_use from final message:", block);
+          sentToolUses.add(block.id);
+          await send(client, connectionId, { 
+            type: "tool_use", 
+            id: block.id, 
+            name: block.name, 
+            input: block.input 
+          });
+          return; // Don't send "done" yet - wait for tool result
+        }
+      }
+    }
+    
+    // Only send "done" if no tool_use was found
+    await send(client, connectionId, { type: "done" });
+  });
+
+  stream.on("error", async (err) => {
+    await send(client, connectionId, { type: "error", message: String(err?.message || err) });
+  });
+}
+
+function trimHistory(history, maxTurns = 12) {
+  if (!Array.isArray(history)) return [];
+  return history.length > maxTurns ? history.slice(-maxTurns) : history;
+}
+
 export const handler = async (event) => {
-  console.log("=== LAMBDA STARTED ===");
-  console.log("Lambda invoked with event:", JSON.stringify(event, null, 2));
+  const client = agClient(event);
+  const connectionId = event.requestContext.connectionId;
 
+  let payload = {};
   try {
-    const connectionId = event.requestContext.connectionId;
-    const client = agClient(event);
+    payload = JSON.parse(event.body || "{}");
+  } catch {}
 
-    let payload = {};
-    try { payload = JSON.parse(event.body || "{}"); } catch {}
+  const model = payload.model || "claude-3-7-sonnet-20250219";
+  const system =
+    payload.system ||
+    "You answer questions about Colton and his projects. His GitHub username is ColtonFRSTT; repos include 'course-notifier' and 'portfolio-website'. You do not have access to myKeen (private). Prefer GitHub tool results. Be concise. If unsure, say you don't know. When showing code, include GitHub links + line ranges.";
+  const history = trimHistory(payload.history, 12);
 
-    console.log("Parsed payload:", payload);
+  // Resume after tool execution
+  if (payload.type === "tool_result") {
 
-    const userText = (payload.message || "").trim();
-    if (!userText) { 
-      await send(client, connectionId, { type:"error", message:"Empty message"}); 
-      return { statusCode: 400 }; 
+    await send(client, connectionId, { type: "ack", tool_use_id: payload.tool_use_id });
+
+    console.log("Processing tool_result payload:", JSON.stringify(payload, null, 2));
+    console.log("History length:", payload.history?.length);
+    console.log("Tool result content length:", payload.content?.length);
+    console.log("Tool result content:", payload.content);
+
+    // Validate the history format
+    if (!Array.isArray(payload.history)) {
+      console.error("Invalid history format - not an array");
+      await send(client, connectionId, { type: "error", message: "Invalid history format" });
+      return { statusCode: 400 };
     }
 
-    console.log("User text:", userText);
-    await send(client, connectionId, { type:"started" });
+    // Check if tool result is empty and enhance it
+    let enhancedHistory = [...payload.history];
+    if (payload.content === "[]" || payload.content === "" || payload.content === "null") {
+      console.log("Empty tool result detected, enhancing message");
+      // Find the last tool_result and enhance it
+      const lastMessage = enhancedHistory[enhancedHistory.length - 1];
+      if (lastMessage?.role === "user" && lastMessage?.content?.[0]?.type === "tool_result") {
+        lastMessage.content[0].content = "No results found. The search returned empty results.";
+        console.log("Enhanced empty tool result");
+      }
+    }
 
-    const model = payload.model || "claude-3-7-sonnet-20250219"; // Fixed model name
-    const system = payload.system || "You are a helpful assistant.";
+    try {
 
-    // Stream tokens from Claude and relay to the same WS connection
+      console.log("Creating stream with Anthropic...");
+      console.log("Model:", model);
+      console.log("System prompt length:", system?.length);
+      console.log("Tools count:", tools?.length);
+      console.log("History for Anthropic:", JSON.stringify(enhancedHistory, null, 2));
+
+      const stream = await anthropic.messages.stream({
+        model,
+        system,
+        tools,
+        max_tokens: 800,
+        thinking: { type: "disabled" }, // cheaper + more stable for tool loops
+        messages: enhancedHistory,
+      });
+      wireStream(stream, client, connectionId);
+      const finalMessage = await stream.finalMessage();
+      console.log("Stream completed for tool_result");
+      console.log("Final message:", JSON.stringify(finalMessage, null, 2));
+    } catch (error) {
+      console.error("Error creating stream for tool_result:", error);
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+      await send(client, connectionId, { type: "error", message: `Encountered error processing tool result: ${error.message}` });
+    }
+    return { statusCode: 200 };
+  }
+
+  // New / continued user message
+  const userText = (payload.message || "").trim();
+  if (!userText) {
+    await send(client, connectionId, { type: "error", message: "Empty message" });
+    return { statusCode: 400 };
+  }
+
+  await send(client, connectionId, { type: "started" });
+
+  try {
     const stream = await anthropic.messages.stream({
       model,
-      max_tokens: 1024,
       system,
-      messages: [{ role:"user", content:userText }]
+      tools,
+      max_tokens: 800,
+      thinking: { type: "disabled" },
+      messages: history, // already trimmed
     });
-
-    stream.on("text", async (t) => { await send(client, connectionId, { type:"delta", text: t }); });
-    stream.on("message", async (msg) => { await send(client, connectionId, { type:"done", message: msg }); });
-    stream.on("error", async (err) => { await send(client, connectionId, { type:"error", message: String(err?.message||err) }); });
-
-    await stream.finalMessage(); // wait for completion
-    return { statusCode: 200 };
+    wireStream(stream, client, connectionId);
+    await stream.finalMessage();
   } catch (error) {
-    console.error("Lambda error:", error);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    console.error("Stream (new message) error:", error);
+    await send(client, connectionId, { type: "error", message: `Stream error: ${error.message}` });
   }
+
+  return { statusCode: 200 };
 };

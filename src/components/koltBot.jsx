@@ -4,54 +4,66 @@ import { SendHorizonal } from "lucide-react";
 
 const apiGatewayUrl = process.env.REACT_APP_API_URL;
 
-function trimHistory(history, maxHistory = 6) {
-  const trimmed = history.slice(-maxHistory);
+// ...existing code...
+function trimHistory(history, targetCount) {
+  const required = new Set(); // tool_use ids we still need to include
+  const collected = [];
 
-  const toolResultIds = new Set();
-  trimmed.forEach(msg => {
-    if (msg.role === "user" && msg.content) {
-      msg.content.forEach(content => {
-        if (content.type === "tool_result" && content.tool_use_id) {
-          toolResultIds.add(content.tool_use_id);
-        }
-      });
-    }
-  });
+  // Helper to inspect a message and return:
+  // { useId: string | null, resultId: string | null }
+  function extractIds(msg) {
+    let useId = null;
+    let resultId = null;
 
-  const toolUseIds = new Set();
-  trimmed.forEach(msg => {
-    if (msg.role === "assistant" && msg.content) {
-      msg.content.forEach(content => {
-        if (content.type === "tool_use" && content.id) {
-          toolUseIds.add(content.id);
-        }
-      });
-    }
-  });
-
-  const orphanedIds = [...toolResultIds].filter(id => !toolUseIds.has(id));
-
-  // Find the tool_use messages for each orphaned ID in the original history
-  const orphanedToolUses = [];
-  orphanedIds.forEach(orphanedId => {
-    for (let i = 0; i < history.length; i++) {
-      const msg = history[i];
-      if (msg.role === "assistant" && msg.content) {
-        const hasMatchingToolUse = msg.content.some(content => 
-          content.type === "tool_use" && content.id === orphanedId
-        );
-        
-        if (hasMatchingToolUse) {
-          orphanedToolUses.push(msg);
-          break; // Found it, move to next orphaned ID
-        }
+    for (const part of msg.content || []) {
+      if (part.type === "tool_use") {
+        useId = part.id;
+      }
+      if (part.type === "tool_result") {
+        resultId = part.tool_use_id;
       }
     }
-  });
-  
-  // Add orphaned tool_use messages to the beginning of trimmed history
-  return [...orphanedToolUses, ...trimmed];
+    return { useId, resultId };
+  }
+
+  // Walk backward
+  for (let i = history.length - 1; i >= 0; i--) {
+    const msg = history[i];
+    const { useId, resultId } = extractIds(msg);
+
+    let mustInclude = false;
+
+    // If this is a tool_result, we need its tool_use
+    if (resultId) {
+      required.add(resultId);
+      mustInclude = true;
+    }
+
+    // If this is a tool_use we needed, include and remove from required
+    if (useId && required.has(useId)) {
+      required.delete(useId);
+      mustInclude = true;
+    }
+
+    // If we haven't reached the rough count yet, keep pulling messages
+    if (!mustInclude && collected.length < targetCount) {
+      mustInclude = true;
+    }
+
+    if (mustInclude) {
+      collected.push(msg);
+    }
+
+    // If we hit our count AND all dependencies are resolved, stop
+    if (collected.length >= targetCount && required.size === 0) {
+      break;
+    }
+  }
+
+  return collected.reverse();
 }
+
+// ...existing code...
 
 async function callClaudeTool(name, input) {
   console.log(`Calling tool: ${name}`, input);
@@ -85,9 +97,12 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
   const [lines, setLines] = useState(["(opening WebSocket…)"]);
   const wsRef = useRef(null);
   const outRef = useRef(null);
+  const bufferRef = useRef(""); // Add ref to track current buffer state
+  const processingToolRef = useRef(false); // Track if we're processing a tool
+  const messageQueueRef = useRef([]); // Queue for messages received during tool processing
 
-  const pendingAcks = new Map();
-  const outbox = []; // queued messages if WS closes before send
+  const pendingAcksRef = useRef(new Map());
+  const outboxRef = useRef([]);
 
   function pushAssistant(linesSetter, text) {
     if (!text) return;
@@ -105,7 +120,7 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
   function sendRaw(obj) {
     if (!wsOpen()) {
       console.warn("Tried to send but WS not open", obj);
-      outbox.push(obj);
+      outboxRef.current.push(obj);
       return;
     }
     wsRef.current.send(JSON.stringify(obj));
@@ -116,13 +131,13 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
     const t = setTimeout(() => {
       console.error("ACK timeout → server never received", key);
     }, timeoutMs);
-    pendingAcks.set(key, t);
+    pendingAcksRef.current.set(key, t);
   }
 
   function flushOutbox() {
     if (!wsOpen()) return;
-    while (outbox.length) {
-      const obj = outbox.shift();
+    while (outboxRef.current.length) {
+      const obj = outboxRef.current.shift();
       sendRaw(obj);
     }
   }
@@ -134,6 +149,11 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
     console.log(`History updated:`, history);
     historyRef.current = history;
   }, [history]);
+
+  // Sync buffer ref with buffer state
+  useEffect(() => {
+    bufferRef.current = buffer;
+  }, [buffer]);
 
   // autoscroll
   useEffect(() => {
@@ -163,129 +183,203 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
       setLines((l) => [...l, "Error"]);
     };
 
+    // Process any queued messages after tool processing is complete
+    const processQueuedMessages = async () => {
+      if (processingToolRef.current || messageQueueRef.current.length === 0) {
+        return;
+      }
+
+      const queuedMessage = messageQueueRef.current.shift();
+      console.log("Processing queued message:", queuedMessage);
+      
+      // Process the queued message by calling the message handler again
+      await handleMessage(queuedMessage);
+      
+      // Process any remaining messages
+      if (messageQueueRef.current.length > 0) {
+        setTimeout(processQueuedMessages, 0);
+      }
+    };
+
+    // Message handling function
+    const handleMessage = async (m) => {
+      if (m.type === "ack" && pendingAcksRef.current.has(m.tool_use_id)) {
+        clearTimeout(pendingAcksRef.current.get(m.tool_use_id));
+        pendingAcksRef.current.delete(m.tool_use_id);
+        console.log("ACK received for", m.tool_use_id);
+        return;
+      }
+
+      if (m.type === "delta") {
+        // If we're processing a tool, queue this delta message
+        if (processingToolRef.current) {
+          console.log(`Queueing delta message during tool processing: "${m.text}"`);
+          messageQueueRef.current.push(m);
+          return;
+        }
+
+        console.log(`Delta text: "${m.text}"`);
+        const deltaText = m.text || "";
+        setBuffer((b) => {
+          const newBuffer = b + deltaText;
+          bufferRef.current = newBuffer; // Keep ref in sync
+          return newBuffer;
+        });
+        return;
+      }
+
+      if (m.type === "done") {
+        // If we're processing a tool, queue this done message
+        if (processingToolRef.current) {
+          console.log("Queueing done message during tool processing");
+          messageQueueRef.current.push(m);
+          return;
+        }
+
+        console.log("Received done message, current buffer:", bufferRef.current);
+        const currentBuffer = bufferRef.current;
+        
+        if (currentBuffer.length > 0) {
+          console.log(`Flushing buffer on done: "${currentBuffer}"`);
+          pushAssistant(setLines, currentBuffer);
+          setHistory((prevHistory) => [...prevHistory, { 
+            role: "assistant", 
+            content: [{ type: "text", text: currentBuffer }] 
+          }]);
+        }
+        
+        setBuffer("");
+        bufferRef.current = "";
+        return;
+      }
+
+      if (m.type === "error") {
+        setLines((l) => [...l, "ERROR: " + (m.message || "unknown")]);
+        return;
+      }
+
+      if (m.type === "tool_use") {
+        console.log(`Tool use requested:`, { name: m.name, input: m.input, id: m.id });
+        const { name, input, id } = m;
+
+        // Set processing flag to queue subsequent messages
+        processingToolRef.current = true;
+
+        // CRITICAL: Always flush buffer and add text to history BEFORE tool_use
+        let currentHistory = [...historyRef.current];
+        const currentBuffer = bufferRef.current;
+        
+        if (currentBuffer.length > 0) {
+          console.log(`Flushing buffer before tool use: "${currentBuffer}"`);
+          pushAssistant(setLines, currentBuffer);
+          
+          // Add buffered text to history
+          currentHistory = [...currentHistory, { 
+            role: "assistant", 
+            content: [{ type: "text", text: currentBuffer }] 
+          }];
+          setBuffer("");
+          bufferRef.current = "";
+        }
+        
+        // Add tool_use to history (after any buffered text)
+        currentHistory = [...currentHistory, { 
+          role: "assistant", 
+          content: [{ type: "tool_use", id, name, input }] 
+        }];
+        
+        // Update history state
+        setHistory(currentHistory);
+        console.log(`Updated history with tool_use`);
+
+        try {
+          const result = await callClaudeTool(name, input);
+
+          const resultString = Array.isArray(result) 
+            ? JSON.stringify(result, null, 2)
+            : typeof result === 'object' 
+              ? JSON.stringify(result, null, 2)
+              : String(result);
+
+          console.log(`Formatted tool result as string:`, resultString);
+          
+          // Add tool_result to current history
+          const nextHistory = [...currentHistory, {
+              role: "user", 
+              content: [{ 
+                  type: "tool_result", 
+                  tool_use_id: id, 
+                  content: resultString
+              }] 
+          }];
+          
+          setHistory(nextHistory);
+          console.log(`Updated history with tool_result`);
+
+          // Send tool_result + full history back to server
+          const trimmedHistory = trimHistory(nextHistory, 12);
+          const toolResultPayload = {
+            type: "tool_result",
+            tool_use_id: id,
+            content: resultString,
+            history: trimmedHistory,
+          };
+          console.log(`Sending tool_result:`, toolResultPayload);
+          sendWithAck(toolResultPayload, toolResultPayload.tool_use_id);
+
+        } catch (err) {
+          // Format error as string
+          const errorString =
+            (err && typeof err === "object" && err.message) ? err.message : String(err);
+
+          // Add tool_result (error) to history so trimming preserves it
+          const failedHistory = [
+            ...currentHistory,
+            {
+              role: "user",
+              content: [
+                {
+                  type: "tool_result",
+                  tool_use_id: id,
+                  content: errorString,
+                  is_error: true,
+                },
+              ],
+            },
+          ];
+          setHistory(failedHistory);
+
+          const trimmedHistory = trimHistory(failedHistory, 12);
+          console.error(`Tool execution error:`, err);
+
+          // Send tool_result with content (not "error") so server/Claude can consume it
+          const errorPayload = {
+            type: "tool_result",
+            tool_use_id: id,
+            content: errorString,
+            is_error: true,
+            history: trimmedHistory,
+          };
+          console.log(`Sending tool error:`, errorPayload);
+          sendWithAck(errorPayload, errorPayload.tool_use_id);
+        } finally {
+          // Clear processing flag and process any queued messages
+          console.log("Tool processing complete, clearing flag and processing queue");
+          processingToolRef.current = false;
+          setTimeout(processQueuedMessages, 0);
+        }
+        return;
+      }
+
+      // fallback text - this shouldn't be reached with JSON messages
+      console.log("Fallback text handling - unexpected message format:", m);
+    };
+
     ws.onmessage = async (e) => {
       try {
         const m = JSON.parse(e.data);
         console.log(`Received message:`, m);
-
-        if (m.type === "ack" && pendingAcks.has(m.tool_use_id)) {
-          clearTimeout(pendingAcks.get(m.tool_use_id));
-          pendingAcks.delete(m.tool_use_id);
-          console.log("ACK received for", m.tool_use_id);
-          return;
-        }
-
-        if (m.type === "delta") {
-          console.log(`Delta text: "${m.text}"`);
-          setBuffer((b) => b + (m.text || ""));
-          return;
-        }
-
-        if (m.type === "done") {
-          console.log("Received done message, current buffer:", buffer);
-          // Use a callback to get the current buffer state
-          setBuffer((currentBuffer) => {
-            if (currentBuffer.length > 0) {
-              console.log(`Flushing buffer on done: "${currentBuffer}"`);
-              pushAssistant(setLines, currentBuffer);
-              setHistory((prevHistory) => [...prevHistory, { 
-                role: "assistant", 
-                content: [{ type: "text", text: currentBuffer }] 
-              }]);
-            }
-            return ""; // Clear buffer
-          });
-          return;
-        }
-
-        if (m.type === "error") {
-          setLines((l) => [...l, "ERROR: " + (m.message || "unknown")]);
-          return;
-        }
-
-        if (m.type === "tool_use") {
-          console.log(`Tool use requested:`, { name: m.name, input: m.input, id: m.id });
-          const { name, input, id } = m;
-
-          // CRITICAL: Always flush buffer and add text to history BEFORE tool_use
-          let currentHistory = [...historyRef.current];
-          
-          if (buffer.length > 0) {
-            console.log(`Flushing buffer before tool use: "${buffer}"`);
-            pushAssistant(setLines, buffer);
-            
-            // Add buffered text to history
-            currentHistory = [...currentHistory, { 
-              role: "assistant", 
-              content: [{ type: "text", text: buffer }] 
-            }];
-            setBuffer("");
-          }
-          
-          // Add tool_use to history (after any buffered text)
-          currentHistory = [...currentHistory, { 
-            role: "assistant", 
-            content: [{ type: "tool_use", id, name, input }] 
-          }];
-          
-          // Update history state
-          setHistory(currentHistory);
-          console.log(`Updated history with tool_use`);
-
-          try {
-            const result = await callClaudeTool(name, input);
-
-            const resultString = Array.isArray(result) 
-              ? JSON.stringify(result, null, 2)
-              : typeof result === 'object' 
-                ? JSON.stringify(result, null, 2)
-                : String(result);
-
-            console.log(`Formatted tool result as string:`, resultString);
-            
-            // Add tool_result to current history
-            const nextHistory = [...currentHistory, {
-                role: "user", 
-                content: [{ 
-                    type: "tool_result", 
-                    tool_use_id: id, 
-                    content: resultString
-                }] 
-            }];
-            
-            setHistory(nextHistory);
-            console.log(`Updated history with tool_result`);
-
-            // Send tool_result + full history back to server
-            const trimmedHistory = trimHistory(nextHistory, 6);
-            const toolResultPayload = {
-              type: "tool_result",
-              tool_use_id: id,
-              content: resultString,
-              history: trimmedHistory,
-            };
-            console.log(`Sending tool_result:`, toolResultPayload);
-            // wsRef.current?.send(JSON.stringify(toolResultPayload));
-            sendWithAck(toolResultPayload, toolResultPayload.tool_use_id);
-
-          } catch (err) {
-            const trimmedHistory = trimHistory(currentHistory, 6);
-            console.error(`❌ Tool execution error:`, err);
-            const errorPayload = {
-              type: "tool_result",
-              tool_use_id: id,
-              error: String(err),
-              history: trimmedHistory,
-            };
-            console.log(`Sending tool error:`, errorPayload);
-            console.log("Sending tool error(history):", currentHistory);
-            wsRef.current?.send(JSON.stringify(errorPayload));
-          }
-          return;
-        }
-
-        // fallback text
-        if (typeof e.data === "string") setLines((l) => [...l, e.data]);
+        await handleMessage(m);
       } catch {
         setLines((l) => [...l, e.data]);
       }
@@ -302,24 +396,26 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
     const t = input.trim();
     console.log(`User input: "${t}"`);
     
-    if (!t || !wsRef.current || wsRef.current.readyState !== 1) {
+    if (!t || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.log(`Cannot send - empty input or WebSocket not ready`);
       return;
     }
 
-    if (buffer.length > 0) {
-      console.log(`Flushing buffer before sending: "${buffer}"`);
-      setLines((l) => [...l, "Assistant: " + buffer]);
+    const currentBuffer = bufferRef.current;
+    if (currentBuffer.length > 0) {
+      console.log(`Flushing buffer before sending: "${currentBuffer}"`);
+      setLines((l) => [...l, "Assistant: " + currentBuffer]);
       setBuffer("");
+      bufferRef.current = "";
     }
 
     const nextHistory = [...historyRef.current, { role: "user", content: [{ type: "text", text: t }] }];
     setHistory(nextHistory);
     setLines((l) => [...l, "You: " + t]);
     
-    const trimmedHistory = trimHistory(nextHistory, 6);
+    const trimmedHistory = trimHistory(nextHistory, 12);
     const payload = { message: t, history: trimmedHistory };
-    console.log(`Sending message: ${payload}, History: ${trimmedHistory}`);
+    console.log(`Sending message: ${payload}, History: ${trimmedHistory}`, payload);
     wsRef.current.send(JSON.stringify(payload));
     setInput("");
   };

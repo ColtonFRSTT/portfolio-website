@@ -110,7 +110,21 @@ export const handler = async (event) => {
   const model = payload.model || "claude-3-7-sonnet-20250219";
   const system =
     payload.system ||
-    "You answer questions about Colton and his projects. His GitHub username is ColtonFRSTT; repos include 'course-notifier' and 'portfolio-website'. You do not have access to myKeen (private). Prefer GitHub tool results. Be concise. If unsure, say you don't know. When showing code, include GitHub links + line ranges.";
+      `You answer questions about Colton and his projects: "course-notifier" and "portfolio-website". GitHub username: ColtonFRSTT.
+
+      Default behavior:
+      - When asked about a project, perform ONE github_search to locate the repository.
+      - Then retrieve ONLY the README (or top-level project documentation) using ONE github_file request.
+      - Summarize from that.
+
+      Do NOT search or open additional files unless the user explicitly asks for implementation details such as:
+      “show code”, “how is this implemented”, “open the file”, “search the repo”, “look at handler”, etc.
+
+      Never recursively inspect directories or fetch multiple files unless the user requests it.
+      If unsure, ask the user what level of detail they want.
+
+      Be concise. If information is not in the README or requested files, say you don’t know.
+      `;
   const history = trimHistory(payload.history, 12);
 
   // Resume after tool execution

@@ -262,8 +262,6 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
         console.log(`Tool use requested:`, { name: m.name, input: m.input, id: m.id });
         const { name, input, id } = m;
 
-        // Set processing flag to queue subsequent messages
-        processingToolRef.current = true;
 
         // CRITICAL: Always flush buffer and add text to history BEFORE tool_use
         let currentHistory = [...historyRef.current];
@@ -278,8 +276,6 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
             role: "assistant", 
             content: [{ type: "text", text: currentBuffer }] 
           }];
-          setBuffer("");
-          bufferRef.current = "";
         }
         
         // Add tool_use to history (after any buffered text)
@@ -291,6 +287,8 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
         // Update history state
         setHistory(currentHistory);
         console.log(`Updated history with tool_use`);
+
+        processingToolRef.current = true;
 
         try {
           const result = await callClaudeTool(name, input);

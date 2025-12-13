@@ -54,9 +54,15 @@ async function send(client, connectionId, data) {
 
 function wireStream(stream, client, connectionId) {
   let sentToolUses = new Set(); // Track which tool_use IDs we've already sent
+  let seq = 0; // Monotonic sequence number per stream
+
+  const sendWithSeq = async (payload) => {
+    const enriched = { ...payload, seq: seq++, ts: Date.now() };
+    await send(client, connectionId, enriched);
+  };
 
   stream.on("text", async (t) => {
-    await send(client, connectionId, { type: "delta", text: t });
+    await sendWithSeq({ type: "delta", text: t });
   });
 
   stream.on("event", async (ev) => {
@@ -73,7 +79,7 @@ function wireStream(stream, client, connectionId) {
         if (block.type === "tool_use" && !sentToolUses.has(block.id)) {
           console.log("Sending tool_use from final message:", block);
           sentToolUses.add(block.id);
-          await send(client, connectionId, { 
+          await sendWithSeq({ 
             type: "tool_use", 
             id: block.id, 
             name: block.name, 
@@ -85,11 +91,11 @@ function wireStream(stream, client, connectionId) {
     }
     
     // Only send "done" if no tool_use was found
-    await send(client, connectionId, { type: "done" });
+    await sendWithSeq({ type: "done" });
   });
 
   stream.on("error", async (err) => {
-    await send(client, connectionId, { type: "error", message: String(err?.message || err) });
+    await sendWithSeq({ type: "error", message: String(err?.message || err) });
   });
 }
 
@@ -130,7 +136,8 @@ export const handler = async (event) => {
   // Resume after tool execution
   if (payload.type === "tool_result") {
 
-    await send(client, connectionId, { type: "ack", tool_use_id: payload.tool_use_id });
+  // ack with seq from a new counter for this flow
+  await send(client, connectionId, { type: "ack", tool_use_id: payload.tool_use_id, ts: Date.now() });
 
     console.log("Processing tool_result payload:", JSON.stringify(payload, null, 2));
     console.log("History length:", payload.history?.length);
@@ -172,7 +179,7 @@ export const handler = async (event) => {
         thinking: { type: "disabled" }, // cheaper + more stable for tool loops
         messages: enhancedHistory,
       });
-      wireStream(stream, client, connectionId);
+  wireStream(stream, client, connectionId);
       const finalMessage = await stream.finalMessage();
       console.log("Stream completed for tool_result");
       console.log("Final message:", JSON.stringify(finalMessage, null, 2));

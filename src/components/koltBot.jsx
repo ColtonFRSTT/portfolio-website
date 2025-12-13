@@ -100,6 +100,10 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
   const bufferRef = useRef(""); // Add ref to track current buffer state
   const processingToolRef = useRef(false); // Track if we're processing a tool
   const messageQueueRef = useRef([]); // Queue for messages received during tool processing
+  // Reordering + debounce for deltas
+  const pendingDeltasRef = useRef([]); // newly arrived, waiting for flush
+  const bufferPiecesRef = useRef([]);  // all pieces for current assistant turn
+  const deltaFlushTimerRef = useRef(null);
 
   const pendingAcksRef = useRef(new Map());
   const outboxRef = useRef([]);
@@ -217,13 +221,34 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
           return;
         }
 
-        console.log(`Delta text: "${m.text}"`);
-        const deltaText = m.text || "";
-        setBuffer((b) => {
-          const newBuffer = b + deltaText;
-          bufferRef.current = newBuffer; // Keep ref in sync
-          return newBuffer;
-        });
+        // Buffer deltas with seq for stable ordering
+        const seq = typeof m.seq === 'number' ? m.seq : null;
+        const text = m.text || "";
+        console.log(`Delta text: "${text}" seq=${seq}`);
+        pendingDeltasRef.current.push({ seq, text });
+
+        // Debounce flush to reduce choppiness
+        if (!deltaFlushTimerRef.current) {
+          deltaFlushTimerRef.current = setTimeout(() => {
+            const items = pendingDeltasRef.current;
+            pendingDeltasRef.current = [];
+            deltaFlushTimerRef.current = null;
+
+            // Accumulate into bufferPieces, then rebuild buffer deterministically
+            bufferPiecesRef.current.push(...items);
+
+            const sorted = [...bufferPiecesRef.current].sort((a, b) => {
+              if (a.seq == null && b.seq == null) return 0;
+              if (a.seq == null) return 1; // unknown seq after known
+              if (b.seq == null) return -1;
+              return a.seq - b.seq;
+            });
+
+            const rebuilt = sorted.map(i => i.text).join('');
+            bufferRef.current = rebuilt;
+            setBuffer(rebuilt);
+          }, 30);
+        }
         return;
       }
 
@@ -232,6 +257,30 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
         if (processingToolRef.current) {
           console.log("ignoring done during tool use");
           return;
+        }
+
+        // Immediate flush of any pending deltas upon done
+        if (deltaFlushTimerRef.current) {
+          clearTimeout(deltaFlushTimerRef.current);
+          deltaFlushTimerRef.current = null;
+        }
+        if (pendingDeltasRef.current.length) {
+          const items = pendingDeltasRef.current;
+          pendingDeltasRef.current = [];
+          bufferPiecesRef.current.push(...items);
+        }
+
+        // Rebuild buffer in order before finalizing
+        if (bufferPiecesRef.current.length) {
+          const sorted = [...bufferPiecesRef.current].sort((a, b) => {
+            if (a.seq == null && b.seq == null) return 0;
+            if (a.seq == null) return 1;
+            if (b.seq == null) return -1;
+            return a.seq - b.seq;
+          });
+          const rebuilt = sorted.map(i => i.text).join('');
+          bufferRef.current = rebuilt;
+          setBuffer(rebuilt);
         }
 
         console.log("Received done message, current buffer:", bufferRef.current);
@@ -246,8 +295,9 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
           }]);
         }
         
-        setBuffer("");
-        bufferRef.current = "";
+  setBuffer("");
+  bufferRef.current = "";
+  bufferPiecesRef.current = [];
         return;
       }
 
@@ -263,7 +313,7 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
 
         // CRITICAL: Always flush buffer and add text to history BEFORE tool_use
         let currentHistory = [...historyRef.current];
-        const currentBuffer = bufferRef.current;
+  const currentBuffer = bufferRef.current;
         
         if (currentBuffer.length > 0) {
           console.log(`Flushing buffer before tool use: "${currentBuffer}"`);
@@ -276,8 +326,9 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
           }];
         }
         
-        setBuffer("");
-        bufferRef.current = "";
+  setBuffer("");
+  bufferRef.current = "";
+  bufferPiecesRef.current = [];
 
         // Add tool_use to history (after any buffered text)
         currentHistory = [...currentHistory, { 

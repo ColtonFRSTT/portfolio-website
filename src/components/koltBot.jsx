@@ -184,22 +184,22 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
     };
 
     // Process any queued messages after tool processing is complete
-    const processQueuedMessages = async () => {
-      if (processingToolRef.current || messageQueueRef.current.length === 0) {
-        return;
-      }
+    // const processQueuedMessages = async () => {
+    //   if (processingToolRef.current || messageQueueRef.current.length === 0) {
+    //     return;
+    //   }
 
-      const queuedMessage = messageQueueRef.current.shift();
-      console.log("Processing queued message:", queuedMessage);
+    //   const queuedMessage = messageQueueRef.current.shift();
+    //   console.log("Processing queued message:", queuedMessage);
       
-      // Process the queued message by calling the message handler again
-      await handleMessage(queuedMessage);
+    //   // Process the queued message by calling the message handler again
+    //   await handleMessage(queuedMessage);
       
-      // Process any remaining messages
-      if (messageQueueRef.current.length > 0) {
-        setTimeout(processQueuedMessages, 0);
-      }
-    };
+    //   // Process any remaining messages
+    //   if (messageQueueRef.current.length > 0) {
+    //     setTimeout(processQueuedMessages, 0);
+    //   }
+    // };
 
     // Message handling function
     const handleMessage = async (m) => {
@@ -213,8 +213,7 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
       if (m.type === "delta") {
         // If we're processing a tool, queue this delta message
         if (processingToolRef.current) {
-          console.log(`Queueing delta message during tool processing: "${m.text}"`);
-          messageQueueRef.current.push(m);
+          console.log(`Ignoring delta during tool processing: "${m.text}"`);
           return;
         }
 
@@ -231,8 +230,7 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
       if (m.type === "done") {
         // If we're processing a tool, queue this done message
         if (processingToolRef.current) {
-          console.log("Queueing done message during tool processing");
-          messageQueueRef.current.push(m);
+          console.log("ignoring done during tool use");
           return;
         }
 
@@ -278,6 +276,9 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
           }];
         }
         
+        setBuffer("");
+        bufferRef.current = "";
+
         // Add tool_use to history (after any buffered text)
         currentHistory = [...currentHistory, { 
           role: "assistant", 
@@ -364,7 +365,6 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
           // Clear processing flag and process any queued messages
           console.log("Tool processing complete, clearing flag and processing queue");
           processingToolRef.current = false;
-          setTimeout(processQueuedMessages, 0);
         }
         return;
       }

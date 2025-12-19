@@ -1,5 +1,5 @@
-import { Linkedin, Instagram, Github, Music4 } from "lucide-react"
-import { Text, Box, Image, Progress, Flex, List } from "@chakra-ui/react"
+import { Linkedin, Instagram, Github, Music4, Icon } from "lucide-react"
+import { Text, Box, Image, Progress, Flex, Link, IconButton } from "@chakra-ui/react"
 import LiquidGlassBox from "../components/ui/LiquidGlassBox"
 import LiquidGlassBoxStatic from "../components/ui/LiquidGlassBoxStatic"
 import "./Home.css"
@@ -14,23 +14,6 @@ function msToMinutesSeconds(ms) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`
 }
 
-const phrases = [
-        "Welcome!",
-        "Hello!",
-        "Initiating handshake protocol...",
-        "Greetings!",
-        "Hi there!",
-        "57 65 6C 63 6F 6D 65 21",
-        "¡Hola!",         // Spanish
-        "Bonjour!",
-        "May the Force be with you!",      // French
-        "Howdy!",         // Southern U.S./cowboy style
-        "Ahoy-hoy!",      // Wacky/old-timey (used by Mr. Burns in *The Simpsons*)
-        "Sup, human?",
-        "Beep boop! Access granted.",   // Casual/wacky
-        "Salutations!"    // Formal and quirky
-    ]
-
 export function Home() {
 
     const [songName, setSongName] = useState("")
@@ -42,20 +25,6 @@ export function Home() {
 
     const retryCount = useRef(0)
     const maxRetries = 5
-
-    const [phraseIndex, setPhraseIndex] = useState(0)
-    const [showPhrase, setShowPhrase] = useState(true)
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setShowPhrase(false)
-            setTimeout(() => {
-                setPhraseIndex((prev) => (prev + 1) % phrases.length)
-                setShowPhrase(true)
-            }, 400) // fade out duration
-        }, 3000) // time per phrase
-        return () => clearInterval(interval)
-    }, [])
 
     useState(() => {
         const fetchSongData = async () => {
@@ -106,34 +75,79 @@ export function Home() {
                     fontWeight="bold"
                     height="64px"
                     position="sticky"
-                    top="0"
-                    zIndex="10"
                 >
                     <LiquidGlassBox
                         display="flex"
-                        justifyContent="space-between"
+                        justifyContent="center"
                         gap={10}
                         alignItems="center"
                         marginLeft="100px"
                         marginTop="50px"
-                        padding={1}
+                        padding={3}
                     >
-                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} marginLeft={2} color="secondary"> Home </Text>
-                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} marginRight={2} color="secondary"> Projects </Text>
+                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xl"} marginLeft={5} color="secondary"> Home </Text>
+                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xl"} marginRight={5} color="secondary"> Projects </Text>
                     </LiquidGlassBox>
                     <LiquidGlassBox
                         marginRight="100px"
                         marginTop="50px"
                         display="flex"
-                        height = "40px"
-                        justifyContent="space-between"
-                        gap={6}
+                        height = "74px"
+                        width = "336px"
+                        justifyContent="center"
                         alignItems="center"
-                        padding={2}
+                        padding={3}
+                        gap="60px"
                     >
-                        <Box my={1} marginLeft={2}><Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.25rem" /></Box>
-                        <Box my={1}><Linkedin style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.25rem" /></Box>
-                        <Box my={1} marginRight={2}><Instagram style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.25rem" /></Box>
+                        <Link href = "https://github.com/ColtonFRSTT">
+                            <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.5rem" />
+                        </Link>
+                        <Link href = "https://www.linkedin.com/in/colton-fridgen-74b838183/">
+                            <Linkedin style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.5rem" />
+                        </Link>
+                        <Link>
+                            <Instagram style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.5rem" />
+                        </Link>
+                    </LiquidGlassBox>
+                </Box>
+                <Box
+                    className="profile-section"
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    justifyContent = "center"
+                    minHeight="calc(100vh - 64px)"
+                >
+                    <LiquidGlassBox 
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        mt = "-200px"
+                        height="500px"
+                        width="1200px"
+                    >
+                        <Image
+                            src="/images/profPic.jpg"
+                            boxSize="250px"
+                            borderRadius="full"
+                            fit="cover"
+                            alt="Profile"
+                            mt = "-20px"
+                            ml = "-150px"
+                        />
+                        <Box
+                            display="flex"
+                            flexDirection="column"
+                            ml = "30px"
+                            mt = "-80px"
+                        >
+                            <Text ml={2} fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxxl"} color={"secondary"}>
+                                Colton Fridgen
+                            </Text>
+                            <Text ml={5} mb={2} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
+                                Software Developer
+                            </Text>
+                        </Box>
                     </LiquidGlassBox>
                 </Box>
                 <Box
@@ -232,106 +246,102 @@ export function Home() {
 
                     {/* Add extra content to enable scrolling */}
                 </Box>
-            </Box>
-            <Box 
-                minHeight="100vh"
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                flexDirection="column"
-                py={20}
+                <Box 
+                    minHeight="100vh"
+                    display="flex"
+                    justifyContent="center"
+                    alignItems="center"
+                    flexDirection="column"
+                    py={20}
                 >
-                <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxxl"} color={"secondary"}>
-                    Projects
-                </Text>
-                <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
-                    Check out my projects
-                </Text>
-                <Flex 
-                    gap={200}
-                    mt={20}
-                >
-                    <LiquidGlassBox width="600px" height="1000px">
-                        <Box
-                            padding = {5}
-                        >
-                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
-                                MyKeen
-                            </Text>
-                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
-                                Jan. - Aug. 2025
-                            </Text>
-                            <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
-                                A client service platform that leverages artificial intelligence and industry-informed automations to combine professional analysis, business insights with workflow automations. 
-                            </Text>
-                        </Box>
-                        <Box
-                            padding = {8}
-                        >
-                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
-                                Tech Stack
-                            </Text>
-                            <List.Root marginLeft = {10} marginTop = {3} textShadow="0 0 8px #483AA0" fontFamily={"body"} fontSize={"lg"}>
-                                <List.Item>React</List.Item>
-                                <List.Item>TypeScript</List.Item>
-                                <List.Item>AWS</List.Item>
-                                <List.Item>SST</List.Item>
-                            </List.Root>
-                        </Box>
-                        <Box
-                            padding = {8}
-                        >
-                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
-                                My Role
-                            </Text>
-                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
-                                This was a team project that I worked on during my co-operative work-term at Keen.
-                                I designed the front and back-end components for features that aimed to improve productivity and workflow for accontants and small buisness owners.
-                                An example of one of the features I designed was a automated variance anlysis system with AI integrations for providing useful explanations for variances in periods and budgets.
-                            </Text>
-                        </Box>
-                    </LiquidGlassBox>
-                    <LiquidGlassBox width="600px" height="1000px">
-                        <Box
-                            padding = {5}
-                        >
-                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
-                                Mun Course Notifier
-                            </Text>
-                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
-                                Aug. 2024 - Present
-                            </Text>
-                            <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
-                                A fully automated platform that continuously monitors university course availability and notifies students via email when seats open.
-                            </Text>
-                        </Box>
-                        <Box
-                            padding = {8}
-                        >
-                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
-                                Tech Stack
-                            </Text>
-                            <List.Root marginLeft = {10} marginTop = {3} textShadow="0 0 8px #483AA0" fontFamily={"body"} fontSize={"lg"}>
-                                <List.Item>React</List.Item>
-                                <List.Item>JavaScript</List.Item>
-                                <List.Item>AWS: Lambda, ECS, DynamoDB, SES</List.Item>
-                                <List.Item>Puppeteer</List.Item>
-                            </List.Root>
-                        </Box>
-                        <Box
-                            padding = {8}
-                        >
-                            <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
-                                My Role
-                            </Text>
-                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
-                                This was a solo project I created after facing the inefficiency in Mun's waitlist system.
-                                I designed a automated system using Puppeteer and cron deployed on ECS to notify users via email when thier course(s) becomes available.
-                                I also dsigned the front-end website so other sudents can use the service effortlessly by just entering thier emails.
-                            </Text>
-                        </Box>
-                    </LiquidGlassBox>
-                </Flex>
+                    <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxxl"} color={"secondary"}>
+                        Projects
+                    </Text>
+                    <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
+                        Check out my projects
+                    </Text>
+                    <Flex 
+                        gap={200}
+                        mt={20}
+                    >
+                        <LiquidGlassBox width="600px" height="420px">
+                            <Box
+                                padding = {5}
+                            >
+                                <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
+                                    MyKeen
+                                </Text>
+                                <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
+                                    Jan. - Aug. 2025
+                                </Text>
+                                <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                    A client service platform that leverages artificial intelligence and industry-informed automations to combine professional analysis, business insights with workflow automations. 
+                                </Text>
+                                <Box display="flex" justifyContent="center" mt={12}>
+                                    <Box
+                                        as="a"
+                                        href="https://github.com/your-username/mykeen" // TODO: replace with actual repo URL
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="8px"
+                                        px={4}
+                                        py={2}
+                                        border="1px solid rgba(255,255,255,.35)"
+                                        borderRadius="20px"
+                                        textDecoration="none"
+                                        transition="all 0.2s ease"
+                                        _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
+                                    >
+                                        <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
+                                            View on GitHub
+                                        </Text>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </LiquidGlassBox>
+                        <LiquidGlassBox width="600px" height="420px">
+                            <Box
+                                padding = {5}
+                            >
+                                <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
+                                    Mun Course Notifier
+                                </Text>
+                                <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
+                                    Aug. 2024 - Present
+                                </Text>
+                                <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                    A fully automated platform that continuously monitors university course availability and notifies students via email when seats open.
+                                </Text>
+                                <Box display="flex" justifyContent="center" mt={12}>
+                                    <Box
+                                        as="a"
+                                        href="https://github.com/your-username/mykeen" // TODO: replace with actual repo URL
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="8px"
+                                        px={4}
+                                        py={2}
+                                        border="1px solid rgba(255,255,255,.35)"
+                                        borderRadius="20px"
+                                        textDecoration="none"
+                                        transition="all 0.2s ease"
+                                        _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
+                                    >
+                                        <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
+                                            View on GitHub
+                                        </Text>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </LiquidGlassBox>
+                    </Flex>
+                </Box>
             </Box>
         </Box>
     )

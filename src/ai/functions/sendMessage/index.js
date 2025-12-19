@@ -113,7 +113,7 @@ export const handler = async (event) => {
     payload = JSON.parse(event.body || "{}");
   } catch {}
 
-  const model = payload.model || "claude-3-7-sonnet-20250219";
+  const model = payload.model || "claude-sonnet-4-5-20250929";
   const system =
     payload.system ||
       `You answer questions about Colton and his projects: "course-notifier" and "portfolio-website". GitHub username: ColtonFRSTT.

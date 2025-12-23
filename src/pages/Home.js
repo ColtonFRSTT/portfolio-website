@@ -1,4 +1,4 @@
-import { Linkedin, Instagram, Github, Music4, Icon } from "lucide-react"
+import { Linkedin, Instagram, Github, Music4, Link2 } from "lucide-react"
 import { Text, Box, Image, Progress, Flex, Link, IconButton } from "@chakra-ui/react"
 import LiquidGlassBox from "../components/ui/LiquidGlassBox"
 import LiquidGlassBoxStatic from "../components/ui/LiquidGlassBoxStatic"
@@ -62,7 +62,6 @@ export function Home() {
             className = "background"
             display="flex"
             flexDirection="column"
-            minHeight="100vh"
         >
             <Box
                 height="100vh"
@@ -294,10 +293,12 @@ export function Home() {
                                         transition="all 0.2s ease"
                                         _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
                                     >
-                                        <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
-                                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
-                                            View on GitHub
-                                        </Text>
+                                        <Link href = "https://www.keenbusiness.ca/mykeen">
+                                            <Link2 style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
+                                                View Website
+                                            </Text>
+                                        </Link>
                                     </Box>
                                 </Box>
                             </Box>
@@ -310,7 +311,7 @@ export function Home() {
                                     Mun Course Notifier
                                 </Text>
                                 <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
-                                    Aug. 2024 - Present
+                                    Aug. - Sep. 2024
                                 </Text>
                                 <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
                                     A fully automated platform that continuously monitors university course availability and notifies students via email when seats open.
@@ -332,10 +333,97 @@ export function Home() {
                                         transition="all 0.2s ease"
                                         _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
                                     >
-                                        <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
-                                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
-                                            View on GitHub
-                                        </Text>
+                                        <Link href = "https://github.com/ColtonFRSTT/course-notifier">
+                                            <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
+                                                View on GitHub
+                                            </Text>
+                                        </Link>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </LiquidGlassBox>
+                    </Flex>
+                    <Flex 
+                        gap={200}
+                        mt={20}
+                    >
+                        <LiquidGlassBox width="600px" height="420px">
+                            <Box
+                                padding = {5}
+                            >
+                                <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
+                                    Redline Frame
+                                </Text>
+                                <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
+                                    Sep. - Dec. 2025
+                                </Text>
+                                <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                    A fast-paced 2D mech platformer built in C++ with SFML, featuring a custom ECS engine, energy-based movement, and responsive combat.
+                                </Text>
+                                <Box display="flex" justifyContent="center" mt={12}>
+                                    <Box
+                                        as="a"
+                                        href="https://github.com/your-username/mykeen" // TODO: replace with actual repo URL
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="8px"
+                                        px={4}
+                                        py={2}
+                                        border="1px solid rgba(255,255,255,.35)"
+                                        borderRadius="20px"
+                                        textDecoration="none"
+                                        transition="all 0.2s ease"
+                                        _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
+                                    >
+                                        <Link href = "">
+                                            <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
+                                                Currently not available
+                                            </Text>
+                                        </Link>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </LiquidGlassBox>
+                        <LiquidGlassBox width="600px" height="420px">
+                            <Box
+                                padding = {5}
+                            >
+                                <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
+                                    Resettlements DB
+                                </Text>
+                                <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
+                                    Sep. - Dec. 2025
+                                </Text>
+                                <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                    AWS RDS-backed relational database modeling Newfoundland resettlements, capturing communities, structures, events, and outcomes through normalized schema design.
+                                </Text>
+                                <Box display="flex" justifyContent="center" mt={12}>
+                                    <Box
+                                        as="a"
+                                        href="https://github.com/your-username/mykeen" // TODO: replace with actual repo URL
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="8px"
+                                        px={4}
+                                        py={2}
+                                        border="1px solid rgba(255,255,255,.35)"
+                                        borderRadius="20px"
+                                        textDecoration="none"
+                                        transition="all 0.2s ease"
+                                        _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
+                                    >
+                                        <Link href = "https://github.com/DeepPatel21313/communities-nl-database">
+                                            <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
+                                                View on GitHub
+                                            </Text>
+                                        </Link>
                                     </Box>
                                 </Box>
                             </Box>

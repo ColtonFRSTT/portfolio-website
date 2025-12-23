@@ -1,4 +1,6 @@
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import Anthropic from "@anthropic-ai/sdk";
 
 const tools = [
@@ -32,7 +34,88 @@ const tools = [
   },
 ];
 
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+
+const WS_CONNECTIONS_TABLE = process.env.WS_CONNECTIONS_TABLE;
+const SESSION_USAGE_TABLE = process.env.SESSION_USAGE_TABLE || "KoltBotSessionUsage";
+const SESSION_WINDOW_SECONDS = 3 * 60 * 60; // 3 hours
+const SESSION_TOKEN_LIMIT = 50000;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+async function getSessionUsage(sessionId) {
+  if (!SESSION_USAGE_TABLE) {
+    console.warn("SESSION_USAGE_TABLE not set, skipping usage check");
+    return 0;
+  }
+  try {
+    const result = await ddb.send(new GetCommand({
+      TableName: SESSION_USAGE_TABLE,
+      Key: { sessionId },
+    }));
+    const now = Math.floor(Date.now() / 1000);
+    // If windowStart is stale (older than SESSION_WINDOW_SECONDS), treat usage as 0
+    if (result.Item?.windowStart && (now - result.Item.windowStart) > SESSION_WINDOW_SECONDS) {
+      return 0;
+    }
+    return result.Item?.tokensUsed || 0;
+  } catch (err) {
+    console.error("Error getting session usage:", err);
+    return 0; // Fail open - don't block if usage check fails
+  }
+}
+
+async function addSessionUsage(sessionId, tokensToAdd) {
+  if (!SESSION_USAGE_TABLE) {
+    console.warn("SESSION_USAGE_TABLE not set, skipping usage update");
+    return 0;
+  }
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const ttl = now + SESSION_WINDOW_SECONDS;
+
+    // First get current record to check if we need to reset window
+    const current = await ddb.send(new GetCommand({
+      TableName: SESSION_USAGE_TABLE,
+      Key: { sessionId },
+    }));
+
+    const windowStart = current.Item?.windowStart || now;
+    const windowExpired = (now - windowStart) > SESSION_WINDOW_SECONDS;
+
+    if (windowExpired || !current.Item) {
+      // Start a new window
+      await ddb.send(new UpdateCommand({
+        TableName: SESSION_USAGE_TABLE,
+        Key: { sessionId },
+        UpdateExpression: "SET tokensUsed = :tokens, windowStart = :now, lastSeen = :now, #ttl = :ttl",
+        ExpressionAttributeNames: { "#ttl": "ttl" },
+        ExpressionAttributeValues: {
+          ":tokens": tokensToAdd,
+          ":now": now,
+          ":ttl": ttl,
+        },
+      }));
+      return tokensToAdd;
+    } else {
+      // Add to existing window
+      await ddb.send(new UpdateCommand({
+        TableName: SESSION_USAGE_TABLE,
+        Key: { sessionId },
+        UpdateExpression: "SET tokensUsed = tokensUsed + :tokens, lastSeen = :now, #ttl = :ttl",
+        ExpressionAttributeNames: { "#ttl": "ttl" },
+        ExpressionAttributeValues: {
+          ":tokens": tokensToAdd,
+          ":now": now,
+          ":ttl": ttl,
+        },
+      }));
+      return (current.Item?.tokensUsed || 0) + tokensToAdd;
+    }
+  } catch (err) {
+    console.error("Error updating session usage:", err);
+    return 0; // Fail open
+  }
+}
 
 function agClient(event) {
   const { domainName, stage } = event.requestContext;
@@ -53,7 +136,6 @@ async function send(client, connectionId, data) {
 }
 
 function wireStream(stream, client, connectionId) {
-  let sentToolUses = new Set(); // Track which tool_use IDs we've already sent
   let seq = 0; // Monotonic sequence number per stream
 
   const sendWithSeq = async (payload) => {
@@ -67,36 +149,45 @@ function wireStream(stream, client, connectionId) {
 
   stream.on("event", async (ev) => {
     console.log("Stream event:", ev.type, ev);
-    // Don't send tool_use on start - input might be incomplete
-  });
-
-  stream.on("message", async (message) => {
-    console.log("Final message received:", JSON.stringify(message, null, 2));
-    
-    // Check for tool_use in the final message content
-    if (message?.content) {
-      for (const block of message.content) {
-        if (block.type === "tool_use" && !sentToolUses.has(block.id)) {
-          console.log("Sending tool_use from final message:", block);
-          sentToolUses.add(block.id);
-          await sendWithSeq({ 
-            type: "tool_use", 
-            id: block.id, 
-            name: block.name, 
-            input: block.input 
-          });
-          return; // Don't send "done" yet - wait for tool result
-        }
-      }
-    }
-    
-    // Only send "done" if no tool_use was found
-    await sendWithSeq({ type: "done" });
   });
 
   stream.on("error", async (err) => {
     await sendWithSeq({ type: "error", message: String(err?.message || err) });
   });
+
+  return sendWithSeq;
+}
+
+async function handleFinalMessage(message, client, connectionId, sendWithSeq, onUsage) {
+  console.log("Final message received:", JSON.stringify(message, null, 2));
+  
+  // Record usage if callback provided
+  if (message?.usage && onUsage) {
+    try {
+      await onUsage(message.usage);
+    } catch (err) {
+      console.error("Error recording usage:", err);
+    }
+  }
+  
+  // Check for tool_use in the final message content
+  if (message?.content) {
+    for (const block of message.content) {
+      if (block.type === "tool_use") {
+        console.log("Sending tool_use from final message:", block);
+        await sendWithSeq({ 
+          type: "tool_use", 
+          id: block.id, 
+          name: block.name, 
+          input: block.input 
+        });
+        return; // Don't send "done" yet - wait for tool result
+      }
+    }
+  }
+  
+  // Only send "done" if no tool_use was found
+  await sendWithSeq({ type: "done" });
 }
 
 function trimHistory(history, maxTurns = 12) {
@@ -107,6 +198,46 @@ function trimHistory(history, maxTurns = 12) {
 export const handler = async (event) => {
   const client = agClient(event);
   const connectionId = event.requestContext.connectionId;
+  const now = Math.floor(Date.now() / 1000);
+
+  const connection = await ddb.send(new GetCommand({
+    TableName: WS_CONNECTIONS_TABLE,
+    Key: { connectionId },
+  }));
+
+  const sessionId = connection.Item?.sessionId;
+  if (!sessionId) {
+    await send(client, connectionId, { type: "error", message: "No session associated with connection" });
+    return { statusCode: 400, error: "No session associated with connection" };
+  }
+
+  // Check token limit before processing
+  const currentUsage = await getSessionUsage(sessionId);
+  if (currentUsage >= SESSION_TOKEN_LIMIT) {
+    await send(client, connectionId, {
+      type: "error",
+      code: "TOKEN_LIMIT_EXCEEDED",
+      message: `Session token limit exceeded (${currentUsage}/${SESSION_TOKEN_LIMIT}). Please try again later.`,
+    });
+    return { statusCode: 429, error: "Token limit exceeded" };
+  }
+
+  // Callback to record usage after each message
+  const onUsage = async (usage) => {
+    const { input_tokens, output_tokens } = usage;
+    const tokensUsed = input_tokens + output_tokens;
+    const newTotal = await addSessionUsage(sessionId, tokensUsed);
+    console.log(`Session ${sessionId}: added ${tokensUsed} tokens (in:${input_tokens}, out:${output_tokens}), total now ${newTotal}`);
+    // Notify client of usage
+    await send(client, connectionId, {
+      type: "usage",
+      input_tokens,
+      output_tokens,
+      session_total: newTotal,
+      session_limit: SESSION_TOKEN_LIMIT,
+    });
+  };
+
 
   let payload = {};
   try {
@@ -179,10 +310,11 @@ export const handler = async (event) => {
         thinking: { type: "disabled" }, // cheaper + more stable for tool loops
         messages: enhancedHistory,
       });
-  wireStream(stream, client, connectionId);
+
+      const sendWithSeq = wireStream(stream, client, connectionId);
       const finalMessage = await stream.finalMessage();
+      await handleFinalMessage(finalMessage, client, connectionId, sendWithSeq, onUsage);
       console.log("Stream completed for tool_result");
-      console.log("Final message:", JSON.stringify(finalMessage, null, 2));
     } catch (error) {
       console.error("Error creating stream for tool_result:", error);
       console.error("Error name:", error.name);
@@ -203,16 +335,20 @@ export const handler = async (event) => {
   await send(client, connectionId, { type: "started" });
 
   try {
+    // Build messages array: existing history + new user message
+    const messages = [...history, { role: "user", content: userText }];
+    
     const stream = await anthropic.messages.stream({
       model,
       system,
       tools,
       max_tokens: 800,
       thinking: { type: "disabled" },
-      messages: history, // already trimmed
+      messages,
     });
-    wireStream(stream, client, connectionId);
-    await stream.finalMessage();
+    const sendWithSeq = wireStream(stream, client, connectionId);
+    const finalMessage = await stream.finalMessage();
+    await handleFinalMessage(finalMessage, client, connectionId, sendWithSeq, onUsage);
   } catch (error) {
     console.error("Stream (new message) error:", error);
     await send(client, connectionId, { type: "error", message: `Stream error: ${error.message}` });

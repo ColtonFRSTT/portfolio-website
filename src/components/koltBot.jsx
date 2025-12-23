@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import { Input, Button, Box, Stack, Text, Flex } from "@chakra-ui/react";
 import { SendHorizonal } from "lucide-react";
 
@@ -90,11 +90,14 @@ async function callClaudeTool(name, input) {
   return result;
 }
 
-export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
+export function KoltBot() {
   const [status, setStatus] = useState("disconnected");
   const [input, setInput] = useState("");
   const [buffer, setBuffer] = useState("");
   const [lines, setLines] = useState(["(opening WebSocket…)"]);
+  const [jwt, setJwt] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
+  const fetchedJwtRef = useRef(false);
   const wsRef = useRef(null);
   const outRef = useRef(null);
   const bufferRef = useRef(""); // Add ref to track current buffer state
@@ -149,6 +152,26 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
   // Chat history (Anthropic message schema)
   const [history, setHistory] = useState([]);
   const historyRef = useRef(history);
+
+  useEffect(() => {
+    // Fetch JWT on mount
+    if (fetchedJwtRef.current) return;
+    fetchedJwtRef.current = true;
+
+    const fetchJwt = async () => {
+      try {
+        const res = await fetch(`${apiGatewayUrl}/koltBotSign`);
+        let data = await res.json();
+        setJwt(data.token);
+        setSessionId(data.sessionId);
+        console.log("Fetched JWT and sessionId");
+      } catch (e) {
+        console.error("Failed to fetch JWT:", e);
+      }
+    };
+    fetchJwt();
+  }, []);
+
   useEffect(() => {
     console.log(`History updated:`, history);
     historyRef.current = history;
@@ -165,8 +188,13 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
   }, [lines, buffer]);
 
   useEffect(() => {
-    console.log(`Initializing WebSocket connection to: ${wsUrl}`);
-    const ws = new WebSocket(wsUrl);
+    if (!jwt) {
+      console.log("JWT not set yet, skipping WS init");
+      return;
+    }
+
+    console.log(`Initializing WebSocket connection to: wss://8iwi50zuz8.execute-api.us-east-2.amazonaws.com/production/`);
+    const ws = new WebSocket(`wss://8iwi50zuz8.execute-api.us-east-2.amazonaws.com/production?token=${encodeURIComponent(jwt)}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -211,6 +239,16 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
         clearTimeout(pendingAcksRef.current.get(m.tool_use_id));
         pendingAcksRef.current.delete(m.tool_use_id);
         console.log("ACK received for", m.tool_use_id);
+        return;
+      }
+
+      if (m.type === "started") {
+        console.log("Stream started");
+        return;
+      }
+
+      if (m.type === "usage") {
+        console.log(`Token usage - in: ${m.input_tokens}, out: ${m.output_tokens}, session total: ${m.session_total}/${m.session_limit}`);
         return;
       }
 
@@ -438,7 +476,7 @@ export function KoltBot({ wsUrl = process.env.REACT_APP_WS_URL }) {
       ws.close();
       wsRef.current = null;
     };
-  }, [wsUrl]);
+  }, [jwt]);
 
   const send = (e) => {
     e.preventDefault();

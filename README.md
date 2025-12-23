@@ -1,70 +1,77 @@
-# Getting Started with Create React App
+# Portfolio Website
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A React-based personal portfolio showcasing projects, skills, and an interactive assistant called KoltBot.
 
-## Available Scripts
+## Overview
 
-In the project directory, you can run:
+This app is built with Create React App and uses a small component library in `src/components/ui`, themeing in `src/theme`, and pages in `src/pages`. It also includes an AI integrations folder (`src/ai`) with serverless functions used by KoltBot.
 
-### `npm start`
+### Key Features
+- Responsive portfolio homepage (`src/pages/Home.js` / `Home.css`)
+- Theming and color mode toggles (`src/components/ui/color-mode.jsx`, `src/theme/theme.js`)
+- Reusable UI like LiquidGlassBox components
+- KoltBot: an on-site assistant with GitHub-integrations
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## KoltBot
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+KoltBot is an interactive assistant component rendered via `src/components/koltBot.jsx` (and a fixed-position variant `koltBot_fixed.jsx`). It communicates with serverless functions under `src/ai/functions` to enable actions like searching GitHub and fetching files.
 
-### `npm test`
+### How it works
+- Frontend: React components (`koltBot.jsx`, `koltBot_fixed.jsx`) provide the chat UI.
+- Backend (serverless):
+	- `src/ai/functions/githubSearch/` – search repos/files on GitHub
+	- `src/ai/functions/githubGetFile/` – fetch a file by path from GitHub
+	- `src/ai/functions/connect/` and `disconnect/` – lifecycle hooks
+	- `src/ai/functions/sendMessage/` – message relay
+	- `src/ai/functions/koltBotSign/` – signing/verification helper
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Project Structure
 
-### `npm run build`
+```
+public/             Static assets and index.html
+src/
+	pages/            Page-level components (e.g., Home)
+	components/       UI components and KoltBot
+		ui/             Reusable UI primitives (color mode, tooltip, toaster)
+	ai/               Assistant tools and serverless functions
+	theme/            Theme configuration
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Setup
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Prerequisites: Node.js LTS and npm.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Install dependencies and start the dev server:
 
-### `npm run eject`
+```bash
+npm install
+npm start
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Open http://localhost:3000 in your browser.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Build
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Create a production build:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+npm run build
+```
 
-## Learn More
+Outputs to the `build/` folder.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Tests
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Run tests in watch mode:
 
-### Code Splitting
+```bash
+npm test
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Deployment
 
-### Analyzing the Bundle Size
+Any static hosting provider that serves the `build/` folder will work (e.g., Netlify, Vercel, GitHub Pages). Ensure secrets for KoltBot's GitHub features are configured in the host.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## License
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This is a personal portfolio project. If you plan to reuse parts of KoltBot or the UI components, please credit the author and review any third-party license requirements.

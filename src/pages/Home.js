@@ -197,7 +197,7 @@ export function Home() {
                                 borderRadius="20px"
                                 textDecoration="none"
                                 transition="all 0.2s ease"
-                                _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
+                                _hover={{ transform: "translateY(-1px)", boxShadow: "0bbg 0 8px #483AA0" }}
                             >
                                 <Link2 style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
                                 <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>

@@ -72,9 +72,7 @@ export function Home() {
             display="flex"
             flexDirection="column"
         >
-            <Box
-                height="100vh"
-            >
+            <Box>
                 <Box
                     className="header"
                     display="flex"
@@ -83,13 +81,13 @@ export function Home() {
                     fontWeight="bold"
                     height="64px"
                     position="sticky"
+                    px={{ base: "4%", lg: "6%", xl: "100px" }}
                 >
                     <LiquidGlassBox
                         display="flex"
                         justifyContent="center"
-                        gap={10}
+                        gap={{ base: 4, md: 6, lg: 10 }}
                         alignItems="center"
-                        marginLeft="100px"
                         marginTop="50px"
                         padding={3}
                     >
@@ -98,9 +96,9 @@ export function Home() {
                             href="#koltbot" 
                             fontFamily={"body"} 
                             textShadow="0 0 8px #483AA0" 
-                            fontSize={"xl"} 
-                            marginRight={5} 
-                            marginLeft={5} 
+                            fontSize={{ base: "md", lg: "xl" }}
+                            marginRight={{ base: 2, md: 5 }}
+                            marginLeft={{ base: 2, md: 5 }}
                             color="secondary"
                             cursor="pointer"
                             _hover={{ opacity: 0.8 }}
@@ -112,8 +110,8 @@ export function Home() {
                             href="#projects" 
                             fontFamily={"body"} 
                             textShadow="0 0 8px #483AA0" 
-                            fontSize={"xl"} 
-                            marginRight={5} 
+                            fontSize={{ base: "md", lg: "xl" }}
+                            marginRight={{ base: 2, md: 5 }}
                             color="secondary"
                             cursor="pointer"
                             _hover={{ opacity: 0.8 }}
@@ -122,15 +120,14 @@ export function Home() {
                         </Text>
                     </LiquidGlassBox>
                     <LiquidGlassBox
-                        marginRight="100px"
                         marginTop="50px"
                         display="flex"
-                        height = "74px"
-                        width = "336px"
+                        height="74px"
+                        width={{ base: "auto", lg: "336px" }}
                         justifyContent="center"
                         alignItems="center"
                         padding={3}
-                        gap="60px"
+                        gap={{ base: "30px", md: "40px", lg: "60px" }}
                     >
                         <Link href = "https://github.com/ColtonFRSTT">
                             <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.2rem" />
@@ -156,29 +153,33 @@ export function Home() {
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
-                        mt = "-200px"
-                        height="500px"
-                        width="1200px"
+                        mt={{ base: "-100px", lg: "-200px" }}
+                        height={{ base: "auto", md: "400px", lg: "500px" }}
+                        width={{ base: "90%", md: "85%", lg: "80%", xl: "1200px" }}
+                        maxWidth="1200px"
+                        padding={{ base: 6, md: 8, lg: 10 }}
+                        flexDirection={{ base: "column", md: "row" }}
                     >
                         <Image
                             src="/images/profPic.jpg"
-                            boxSize="250px"
+                            boxSize={{ base: "180px", md: "220px", lg: "250px" }}
                             borderRadius="full"
                             fit="cover"
                             alt="Profile"
-                            mt = "-20px"
-                            ml = "-150px"
+                            mt={{ base: 0, md: "-20px" }}
+                            ml={{ base: 0, md: "-50px", lg: "-150px" }}
                         />
                         <Box
                             display="flex"
                             flexDirection="column"
-                            ml = "30px"
-                            mt = "-80px"
+                            ml={{ base: 0, md: "30px" }}
+                            mt={{ base: 4, md: "-80px" }}
+                            alignItems={{ base: "center", md: "flex-start" }}
                         >
-                            <Text ml={2} fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxxl"} color={"secondary"}>
+                            <Text ml={{ base: 0, md: 2 }} fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={{ base: "xl", md: "xxl", lg: "xxxl" }} color={"secondary"} textAlign={{ base: "center", md: "left" }}>
                                 Colton Fridgen
                             </Text>
-                            <Text ml={5} mb={2} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
+                            <Text ml={{ base: 0, md: 5 }} mb={2} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign={{ base: "center", md: "left" }}>
                                 Software Developer
                             </Text>
                             <Box
@@ -189,10 +190,10 @@ export function Home() {
                                 alignItems="center"
                                 gap="8px"
                                 px={4}
-                                width = "205px"
+                                width="205px"
                                 py={2}
-                                ml ={4}
-                                mt = {6}
+                                ml={{ base: 0, md: 4 }}
+                                mt={6}
                                 border="1px solid rgba(255,255,255,.35)"
                                 borderRadius="20px"
                                 textDecoration="none"
@@ -222,7 +223,9 @@ export function Home() {
                     <Box
                         display = "flex"
                         flexDirection = "column"
-                        width = "1300px"
+                        width={{ base: "95%", md: "90%", lg: "85%", xl: "1300px" }}
+                        maxWidth="1300px"
+                        px={{ base: 4, md: 0 }}
                     >
                         <Text ml={2} fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"}>
                             Ask KoltBot
@@ -239,7 +242,7 @@ export function Home() {
                         flexDirection="column"
                         position="fixed"
                         bottom="30px"
-                        right="100px"
+                        right={{ base: "20px", md: "50px", lg: "100px" }}
                         zIndex={20}
                     >
                         <LiquidGlassBox
@@ -330,6 +333,7 @@ export function Home() {
                     alignItems="center"
                     flexDirection="column"
                     py={20}
+                    px={{ base: 4, md: 8, lg: 12 }}
                 >
                     <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxxl"} color={"secondary"}>
                         Projects
@@ -338,10 +342,14 @@ export function Home() {
                         Check out my projects
                     </Text>
                     <Flex 
-                        gap={200}
+                        gap={{ base: 8, md: 12, xl: 200 }}
                         mt={20}
+                        flexWrap="wrap"
+                        justifyContent="center"
+                        width="100%"
+                        maxWidth="1600px"
                     >
-                        <LiquidGlassBox width="600px" height="420px">
+                        <LiquidGlassBox width={{ base: "100%", md: "45%", xl: "600px" }} maxWidth="600px" height="420px">
                             <Box
                                 padding = {5}
                             >
@@ -381,7 +389,7 @@ export function Home() {
                                 </Box>
                             </Box>
                         </LiquidGlassBox>
-                        <LiquidGlassBox width="600px" height="420px">
+                        <LiquidGlassBox width={{ base: "100%", md: "45%", xl: "600px" }} maxWidth="600px" height="420px">
                             <Box
                                 padding = {5}
                             >
@@ -423,10 +431,14 @@ export function Home() {
                         </LiquidGlassBox>
                     </Flex>
                     <Flex 
-                        gap={200}
+                        gap={{ base: 8, md: 12, xl: 200 }}
                         mt={20}
+                        flexWrap="wrap"
+                        justifyContent="center"
+                        width="100%"
+                        maxWidth="1600px"
                     >
-                        <LiquidGlassBox width="600px" height="420px">
+                        <LiquidGlassBox width={{ base: "100%", md: "45%", xl: "600px" }} maxWidth="600px" height="420px">
                             <Box
                                 padding = {5}
                             >
@@ -466,7 +478,7 @@ export function Home() {
                                 </Box>
                             </Box>
                         </LiquidGlassBox>
-                        <LiquidGlassBox width="600px" height="420px">
+                        <LiquidGlassBox width={{ base: "100%", md: "45%", xl: "600px" }} maxWidth="600px" height="420px">
                             <Box
                                 padding = {5}
                             >
@@ -508,10 +520,14 @@ export function Home() {
                         </LiquidGlassBox>
                     </Flex>
                     <Flex 
-                        gap={200}
+                        gap={{ base: 8, md: 12, xl: 200 }}
                         mt={20}
+                        flexWrap="wrap"
+                        justifyContent="center"
+                        width="100%"
+                        maxWidth="1600px"
                     >
-                        <LiquidGlassBox width="600px" height="420px">
+                        <LiquidGlassBox width={{ base: "100%", md: "45%", xl: "600px" }} maxWidth="600px" height="420px">
                             <Box
                                 padding = {5}
                             >

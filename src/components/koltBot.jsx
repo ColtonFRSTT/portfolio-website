@@ -1,6 +1,7 @@
 import React, { use, useEffect, useRef, useState } from "react";
 import { Input, Button, Box, Stack, Text, Flex } from "@chakra-ui/react";
 import { SendHorizonal } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 const apiGatewayUrl = process.env.REACT_APP_API_URL;
 
@@ -97,6 +98,7 @@ export function KoltBot() {
   const [lines, setLines] = useState(["(opening WebSocket…)"]);
   const [jwt, setJwt] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [isWaiting, setIsWaiting] = useState(false);
   const fetchedJwtRef = useRef(false);
   const wsRef = useRef(null);
   const outRef = useRef(null);
@@ -161,12 +163,22 @@ export function KoltBot() {
     const fetchJwt = async () => {
       try {
         const res = await fetch(`${apiGatewayUrl}/koltBotSign`);
-        let data = await res.json();
+        const data = await res.json();
+        
+        if (!res.ok) {
+          // Handle rate limit or other errors
+          const errorMessage = data.error || data.message || `Request failed (${res.status})`;
+          console.error("JWT fetch error:", errorMessage);
+          setLines((l) => [...l, "Error: " + errorMessage]);
+          return;
+        }
+        
         setJwt(data.token);
         setSessionId(data.sessionId);
         console.log("Fetched JWT and sessionId");
       } catch (e) {
         console.error("Failed to fetch JWT:", e);
+        setLines((l) => [...l, "Error: Failed to connect to server. Please try again later."]);
       }
     };
     fetchJwt();
@@ -202,6 +214,17 @@ export function KoltBot() {
       setStatus("connected");
       setLines((l) => [...l, "Connected"]);
       flushOutbox();
+      
+      // Send automatic welcome message
+      const welcomeMessage = "Hello, what can you do?";
+      const nextHistory = [{ role: "user", content: [{ type: "text", text: welcomeMessage }] }];
+      setHistory(nextHistory);
+      setLines((l) => [...l, "You: " + welcomeMessage]);
+      setIsWaiting(true);
+      
+      const payload = { message: welcomeMessage, history: nextHistory };
+      console.log(`Sending welcome message:`, payload);
+      ws.send(JSON.stringify(payload));
     };
 
     ws.onclose = (event) => {
@@ -258,6 +281,9 @@ export function KoltBot() {
           console.log(`Ignoring delta during tool processing: "${m.text}"`);
           return;
         }
+
+        // Clear waiting state once we start receiving content
+        setIsWaiting(false);
 
         // Buffer deltas with seq for stable ordering
         const seq = typeof m.seq === 'number' ? m.seq : null;
@@ -336,11 +362,13 @@ export function KoltBot() {
   setBuffer("");
   bufferRef.current = "";
   bufferPiecesRef.current = [];
+  setIsWaiting(false);
         return;
       }
 
       if (m.type === "error") {
         setLines((l) => [...l, "ERROR: " + (m.message || "unknown")]);
+        setIsWaiting(false);
         return;
       }
 
@@ -460,6 +488,13 @@ export function KoltBot() {
 
       // fallback text - this shouldn't be reached with JSON messages
       console.log("Fallback text handling - unexpected message format:", m);
+      
+      // Handle server error messages that don't have type: "error"
+      if (m.message) {
+        setLines((l) => [...l, "Error: " + m.message]);
+        setIsWaiting(false);
+        return;
+      }
     };
 
     ws.onmessage = async (e) => {
@@ -499,6 +534,7 @@ export function KoltBot() {
     const nextHistory = [...historyRef.current, { role: "user", content: [{ type: "text", text: t }] }];
     setHistory(nextHistory);
     setLines((l) => [...l, "You: " + t]);
+    setIsWaiting(true);
     
     const trimmedHistory = trimHistory(nextHistory, 12);
     const payload = { message: t, history: trimmedHistory };
@@ -511,8 +547,37 @@ export function KoltBot() {
     if (!message.trim()) return null;
     const isUser = message.startsWith("You: ");
     const isAssistant = message.startsWith("Assistant: ");
-    const isSystem = !isUser && !isAssistant;
-    const content = isUser ? message.slice(5) : isAssistant ? message.slice(11) : message;
+    const isError = message.startsWith("Error: ") || message.startsWith("ERROR: ");
+    const isSystem = !isUser && !isAssistant && !isError;
+    const content = isUser 
+      ? message.slice(5) 
+      : isAssistant 
+        ? message.slice(11) 
+        : isError 
+          ? message.slice(message.indexOf(": ") + 2)
+          : message;
+
+    if (isError) {
+      return (
+        <Flex key={index} justify="center" mb={3} px={2}>
+          <Box
+            maxW="80%"
+            bg="red.900"
+            color="red.100"
+            px={4}
+            py={3}
+            borderRadius="lg"
+            borderLeft="4px solid"
+            borderColor="red.500"
+            boxShadow="0 0 15px rgba(220, 38, 38, 0.4)"
+          >
+            <Text fontSize="sm" fontWeight="medium">
+              ⚠️ {content}
+            </Text>
+          </Box>
+        </Flex>
+      );
+    }
 
     if (isSystem) {
       return (
@@ -536,10 +601,23 @@ export function KoltBot() {
           borderBottomRightRadius={isUser ? "sm" : "lg"}
           borderBottomLeftRadius={isUser ? "lg" : "sm"}
           boxShadow="0 0 20px rgba(72, 58, 160, 0.6)"
+          sx={{
+            '& p': { margin: 0 },
+            '& p + p': { marginTop: 2 },
+            '& code': { bg: 'whiteAlpha.200', px: 1, borderRadius: 'sm', fontFamily: 'mono' },
+            '& pre': { bg: 'whiteAlpha.200', p: 2, borderRadius: 'md', overflowX: 'auto', my: 2 },
+            '& pre code': { bg: 'transparent', p: 0 },
+            '& ul, & ol': { pl: 4, my: 1 },
+            '& li': { my: 0.5 },
+          }}
         >
-          <Text fontSize="sm" whiteSpace="pre-wrap">
-            {content}
-          </Text>
+          {isAssistant ? (
+            <ReactMarkdown>{content}</ReactMarkdown>
+          ) : (
+            <Text fontSize="sm" whiteSpace="pre-wrap">
+              {content}
+            </Text>
+          )}
         </Box>
       </Flex>
     );
@@ -576,9 +654,35 @@ export function KoltBot() {
                 borderBottomRightRadius={"lg"}
                 borderBottomLeftRadius={"sm"}
                 boxShadow="0 0 20px rgba(72, 58, 160, 0.6)"
+                sx={{
+                  '& p': { margin: 0 },
+                  '& p + p': { marginTop: 2 },
+                  '& code': { bg: 'whiteAlpha.200', px: 1, borderRadius: 'sm', fontFamily: 'mono' },
+                  '& pre': { bg: 'whiteAlpha.200', p: 2, borderRadius: 'md', overflowX: 'auto', my: 2 },
+                  '& pre code': { bg: 'transparent', p: 0 },
+                  '& ul, & ol': { pl: 4, my: 1 },
+                  '& li': { my: 0.5 },
+                }}
               >
-                <Text fontSize="sm" whiteSpace="pre-wrap">
-                  {buffer}
+                <ReactMarkdown>{buffer}</ReactMarkdown>
+              </Box>
+            </Flex>
+          )}
+          {isWaiting && !buffer && (
+            <Flex justify="flex-start" mb={3} px={2}>
+              <Box
+                maxW="70%"
+                bg="#483AA0"
+                color={"white"}
+                px={4}
+                py={2}
+                borderRadius="lg"
+                borderBottomRightRadius={"lg"}
+                borderBottomLeftRadius={"sm"}
+                boxShadow="0 0 20px rgba(72, 58, 160, 0.6)"
+              >
+                <Text fontSize="sm" fontStyle="italic">
+                  thinking...
                 </Text>
               </Box>
             </Flex>
@@ -592,7 +696,8 @@ export function KoltBot() {
           value={input}
           padding={3}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Prompt..."
+          placeholder={isWaiting ? "Waiting for response..." : "Prompt..."}
+          disabled={isWaiting}
           borderColor="#4a4567ff"
           _focus={{
             textShadow: "0 0 8px #483AA0",
@@ -606,7 +711,7 @@ export function KoltBot() {
           borderTop="none"
           borderRight="none"
           borderColor="#4a4567ff"
-          disabled={status !== "connected"}
+          disabled={status !== "connected" || isWaiting}
         >
           <SendHorizonal />
         </Button>

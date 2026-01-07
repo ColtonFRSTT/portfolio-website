@@ -22,6 +22,7 @@ export function Home() {
     const [songIsLoading, setSongIsLoading] = useState(true)
     const [songDuration, setSongDuration] = useState(0)
     const [songProgress, setSongProgress] = useState(0)
+    const [isPlaying, setIsPlaying] = useState(false)
 
     const retryCount = useRef(0)
     const maxRetries = 5
@@ -33,11 +34,18 @@ export function Home() {
                 const response = await fetch("https://txz4mvpkqg.execute-api.us-east-2.amazonaws.com/dev/spotifyGetCurrentSong")
                 const data = await response.json()
                 console.log("Fetched song data:", data)
-                setSongName(data.name)
-                setArtistName(data.artists)
-                setImageUrl(data.albumImage)
-                setSongDuration(data.durationMs)
-                setSongProgress(data.progressMs)
+                
+                // Check if a song is actually playing
+                if (data.name && data.name.trim() !== "") {
+                    setSongName(data.name)
+                    setArtistName(data.artists)
+                    setImageUrl(data.albumImage)
+                    setSongDuration(data.durationMs)
+                    setSongProgress(data.progressMs)
+                    setIsPlaying(true)
+                } else {
+                    setIsPlaying(false)
+                }
                 retryCount.current = 0
             } catch (error) {
                 if (retryCount.current < maxRetries) {
@@ -49,6 +57,7 @@ export function Home() {
                     fetchSongData()
                 } else {
                     console.error("Max retries reached")
+                    setIsPlaying(false)
                 }
             } finally {
                 setSongIsLoading(false)
@@ -84,8 +93,33 @@ export function Home() {
                         marginTop="50px"
                         padding={3}
                     >
-                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xl"} marginLeft={5} color="secondary"> Home </Text>
-                        <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xl"} marginRight={5} color="secondary"> Projects </Text>
+                        <Text 
+                            as="a" 
+                            href="#koltbot" 
+                            fontFamily={"body"} 
+                            textShadow="0 0 8px #483AA0" 
+                            fontSize={"xl"} 
+                            marginRight={5} 
+                            marginLeft={5} 
+                            color="secondary"
+                            cursor="pointer"
+                            _hover={{ opacity: 0.8 }}
+                        > 
+                            KoltBot 
+                        </Text>
+                        <Text 
+                            as="a" 
+                            href="#projects" 
+                            fontFamily={"body"} 
+                            textShadow="0 0 8px #483AA0" 
+                            fontSize={"xl"} 
+                            marginRight={5} 
+                            color="secondary"
+                            cursor="pointer"
+                            _hover={{ opacity: 0.8 }}
+                        > 
+                            Projects 
+                        </Text>
                     </LiquidGlassBox>
                     <LiquidGlassBox
                         marginRight="100px"
@@ -99,17 +133,18 @@ export function Home() {
                         gap="60px"
                     >
                         <Link href = "https://github.com/ColtonFRSTT">
-                            <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.5rem" />
+                            <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.2rem" />
                         </Link>
                         <Link href = "https://www.linkedin.com/in/colton-fridgen-74b838183/">
-                            <Linkedin style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.5rem" />
+                            <Linkedin style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.2rem" />
                         </Link>
                         <Link>
-                            <Instagram style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.5rem" />
+                            <Instagram style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="2.2rem" />
                         </Link>
                     </LiquidGlassBox>
                 </Box>
                 <Box
+                    id="home"
                     className="profile-section"
                     display="flex"
                     flexDirection="column"
@@ -146,10 +181,35 @@ export function Home() {
                             <Text ml={5} mb={2} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"}>
                                 Software Developer
                             </Text>
+                            <Box
+                                as="a"
+                                href="/images/defaultResume.pdf"
+                                download="Colton_Fridgen_Resume.pdf"
+                                display="flex"
+                                alignItems="center"
+                                gap="8px"
+                                px={4}
+                                width = "205px"
+                                py={2}
+                                ml ={4}
+                                mt = {6}
+                                border="1px solid rgba(255,255,255,.35)"
+                                borderRadius="20px"
+                                textDecoration="none"
+                                transition="all 0.2s ease"
+                                _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
+                            >
+                                <Link2 style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
+                                    Download Resume
+                                </Text>
+                            </Box>
+
                         </Box>
                     </LiquidGlassBox>
                 </Box>
                 <Box
+                    id="koltbot"
                     className="content"
                     display="flex"
                     flexDirection="column"
@@ -204,7 +264,24 @@ export function Home() {
                                     <Spinner color = "secondary"></Spinner>
                                 </Box>
                             )}
-                            {(!songIsLoading) && (
+                            {(!songIsLoading && !isPlaying) && (
+                                <Box
+                                    display="flex"
+                                    flexDirection="column"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    minHeight="100px"
+                                    opacity={0.7}
+                                >
+                                    <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize="md" color="gray.400" fontStyle="italic">
+                                        Nothing playing right now
+                                    </Text>
+                                    <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize="xs" color="gray.500" mt={1}>
+                                        Check back later to see what I'm listening to
+                                    </Text>
+                                </Box>
+                            )}
+                            {(!songIsLoading && isPlaying) && (
                                 <>
                                 <Box
                                     display="flex"
@@ -246,6 +323,7 @@ export function Home() {
                     {/* Add extra content to enable scrolling */}
                 </Box>
                 <Box 
+                    id="projects"
                     minHeight="100vh"
                     display="flex"
                     justifyContent="center"
@@ -268,7 +346,7 @@ export function Home() {
                                 padding = {5}
                             >
                                 <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
-                                    MyKeen
+                                    MyKeen - Co-op
                                 </Text>
                                 <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
                                     Jan. - Aug. 2025
@@ -378,10 +456,10 @@ export function Home() {
                                         transition="all 0.2s ease"
                                         _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
                                     >
-                                        <Link href = "">
-                                            <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                        <Link href = "https://www.youtube.com/watch?v=c622pSpsjBI">
+                                            <Link2 style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
                                             <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
-                                                Currently not available
+                                                Watch Overview
                                             </Text>
                                         </Link>
                                     </Box>
@@ -419,6 +497,51 @@ export function Home() {
                                         _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
                                     >
                                         <Link href = "https://github.com/DeepPatel21313/communities-nl-database">
+                                            <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
+                                            <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
+                                                View on GitHub
+                                            </Text>
+                                        </Link>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </LiquidGlassBox>
+                    </Flex>
+                    <Flex 
+                        gap={200}
+                        mt={20}
+                    >
+                        <LiquidGlassBox width="600px" height="420px">
+                            <Box
+                                padding = {5}
+                            >
+                                <Text fontWeight={"bold"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"xxl"} color={"secondary"} textAlign="center">
+                                    KoltBot
+                                </Text>
+                                <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} textAlign="center">
+                                    Jun. 2025 - Present
+                                </Text>
+                                <Text height = {"150px"} fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"lg"} textAlign="center" padding = {3} marginTop = {6}>
+                                    KoltBot is a Claude-powered chat bot that pulls code from my GitHub projects to generate clear, detailed explanations of how they work.
+                                </Text>
+                                <Box display="flex" justifyContent="center" mt={12}>
+                                    <Box
+                                        as="a"
+                                        href="https://github.com/your-username/mykeen" // TODO: replace with actual repo URL
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="8px"
+                                        px={4}
+                                        py={2}
+                                        border="1px solid rgba(255,255,255,.35)"
+                                        borderRadius="20px"
+                                        textDecoration="none"
+                                        transition="all 0.2s ease"
+                                        _hover={{ transform: "translateY(-1px)", boxShadow: "0 0 8px #483AA0" }}
+                                    >
+                                        <Link href = "https://github.com/ColtonFRSTT/portfolio-website">
                                             <Github style={{ filter: "drop-shadow(0 0 8px #483AA0)"}} color="#483AA0" size="1.1rem" />
                                             <Text fontFamily={"body"} textShadow="0 0 8px #483AA0" fontSize={"md"} color={"secondary"}>
                                                 View on GitHub

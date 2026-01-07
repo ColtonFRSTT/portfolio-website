@@ -39,7 +39,7 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const WS_CONNECTIONS_TABLE = process.env.WS_CONNECTIONS_TABLE;
 const SESSION_USAGE_TABLE = process.env.SESSION_USAGE_TABLE || "KoltBotSessionUsage";
 const SESSION_WINDOW_SECONDS = 3 * 60 * 60; // 3 hours
-const SESSION_TOKEN_LIMIT = 50000;
+const SESSION_TOKEN_LIMIT = 100000;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 async function getSessionUsage(sessionId) {
@@ -247,12 +247,18 @@ export const handler = async (event) => {
   const model = payload.model || "claude-sonnet-4-5-20250929";
   const system =
     payload.system ||
-      `You answer questions about Colton and his projects: "course-notifier" and "portfolio-website". GitHub username: ColtonFRSTT.
+      `You answer questions about Colton and his projects: "course-notifier", "portfolio-website", "
+communities-nl-database", "MyKeen", and "RedlineFrame". GitHub username: ColtonFRSTT.
 
       Default behavior:
       - When asked about a project, perform ONE github_search to locate the repository.
       - Then retrieve ONLY the README (or top-level project documentation) using ONE github_file request.
       - Summarize from that.
+
+      If asked about resettlementsDB or similar terms, perform a github_search to find the "communities-nl-database" owned by DeepPatel21313 repository and retrieve information from its README.
+      If asked about KoltBot, do the same for the "portfolio-website" repository with a focus on KoltBot related things.
+      If asked about RedLineFrame, say you dont have access to that repo since its private but that its a 2d platformer built with a from scratch ECS game engine built in C++.
+      If asked about Mykeen, say that you don't have access to the repo since its not owned by colton. explain it was a project worked on during coltons co-op and its A client service platform that leverages artificial intelligence and industry-informed automations to combine professional analysis, business insights with workflow automations.
 
       Do NOT search or open additional files unless the user explicitly asks for implementation details such as:
       “show code”, “how is this implemented”, “open the file”, “search the repo”, “look at handler”, etc.

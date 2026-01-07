@@ -26,8 +26,9 @@ export const handler = async (event) => {
         const q = await ddb.send(new QueryCommand({
             TableName: IP_SESSIONS_TABLE,
             KeyConditionExpression: "#ip = :ip",
-            ExpressionAttributeNames: {"#ip": "ip"},
-            ExpressionAttributeValues: {":ip": ip},
+            FilterExpression: "#ttl > :now",
+            ExpressionAttributeNames: {"#ip": "ip", "#ttl": "ttl"},
+            ExpressionAttributeValues: {":ip": ip, ":now": now},
             Select: "COUNT",
         }));
 
@@ -40,7 +41,7 @@ export const handler = async (event) => {
                     "content-type": "application/json",
                     "cache-control": "no-store",
                 },
-                body: JSON.stringify({ error: "Too many sessions from this IP" }),
+                body: JSON.stringify({ error: "Too many sessions from this IP (5), try again in a few hours" }),
             }
         }
 
